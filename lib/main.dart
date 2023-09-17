@@ -31,7 +31,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const MyHomePage(title: 'cultural-arts.com'),
     );
   }
 }
@@ -86,24 +86,32 @@ class _MyHomePageState extends State<MyHomePage> {
         // the App.build method, and use it to set our appbar title.
         title: Text(widget.title),
       ),
-      body: GridView.builder(
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2, // Number of columns in the grid
+      body: Container(
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage(
+                'assets/images/take_statue_picture.png'), // Replace with your image path
+            fit: BoxFit.cover, // You can adjust the fit as needed
+          ),
         ),
-        itemCount: 10, // Number of items in the grid
-        itemBuilder: (BuildContext context, int index) {
-          // Replace this with your custom grid item widget
-          return Card(
-            child: Center(
-              child: Text('Item $index'),
-            ),
-          );
-        },
+        child: GridView.builder(
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+          ),
+          itemCount: 0,
+          itemBuilder: (BuildContext context, int index) {
+            return Card(
+              child: Center(
+                child: Text('Item $index'),
+              ),
+            );
+          },
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _incrementCounter,
         tooltip: 'Increment',
-        child: const Icon(Icons.add),
+        child: const Icon(Icons.add_a_photo),
       ), // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
