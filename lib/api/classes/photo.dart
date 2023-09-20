@@ -5,7 +5,7 @@ class Photo {
   final String id;
   final String photo;
 
-  Photo({
+  const Photo({
     required this.id,
     required this.photo,
   });

@@ -5,7 +5,7 @@ class ArtSuggestions {
   final Photo? photo;
   final List<Art?>? suggestions;
 
-  ArtSuggestions({
+  const ArtSuggestions({
     this.photo,
     this.suggestions,
   });

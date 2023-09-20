@@ -5,7 +5,7 @@ class GEPHOSResponse {
   final Map<String, double> defaultPhoto;
   final Map<String, double> extraPhoto;
 
-  GEPHOSResponse({
+  const GEPHOSResponse({
     required this.defaultPhoto,
     required this.extraPhoto,
   });

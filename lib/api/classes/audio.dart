@@ -8,7 +8,7 @@ class Audio {
   final String addedBy;
   final String language;
 
-  Audio({
+  const Audio({
     required this.id,
     required this.audioFile,
     required this.status,

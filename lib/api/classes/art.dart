@@ -13,7 +13,7 @@ class Art {
   final Audio? audio;
   final String? licence;
 
-  Art({
+  const Art({
     required this.id,
     required this.intro,
     required this.artName,

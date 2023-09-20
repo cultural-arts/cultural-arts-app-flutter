@@ -1,12 +1,6 @@
-import 'dart:async';
-import 'dart:convert';
-import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:http/http.dart' as http;
 
-import 'api/classes/art_suggestions.dart';
 import 'api/log_api.dart';
 
 class UploadPhoto extends StatefulWidget {
@@ -110,7 +104,7 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
             onPressed: () {
               Navigator.of(context).pop();
             },
-            child: Text("OK"),
+            child: const Text("OK"),
           ),
         ],
       ),
