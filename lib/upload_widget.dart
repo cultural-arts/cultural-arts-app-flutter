@@ -55,6 +55,7 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
     final imageBytes = await acquiredImage.readAsBytes();
     base64Image = base64Encode(imageBytes);
 
+    // add gps location provider with
     Map<String, String> exifData = {};
     exifData['latitude'] = '45.506146';
     exifData['longitude'] = '11.860613';
@@ -154,7 +155,6 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
     );
   }
 }
-
 
 /**
 
