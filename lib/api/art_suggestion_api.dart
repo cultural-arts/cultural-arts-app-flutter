@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'classes/art_suggestions.dart';
 
@@ -7,7 +8,7 @@ class ArtSuggestionsAPI {
 
   ArtSuggestionsAPI({required this.baseUrl});
 
-  Future<ArtSuggestions?> searchPerfectMatch(
+  Future<http.Response> searchPerfectMatch(
       String encodedPhoto, Map<String, String?> exif) async {
     final response = await http.post(
       Uri.parse('$baseUrl/search-perfect-match'),
@@ -20,15 +21,10 @@ class ArtSuggestionsAPI {
       },
     );
 
-    if (response.statusCode == 200) {
-      final Map<String, dynamic> responseData = jsonDecode(response.body);
-      return ArtSuggestions.fromJson(responseData);
-    } else {
-      throw Exception('Failed to load data');
-    }
+    return response;
   }
 
-  Future<ArtSuggestions?> searchArtSuggestions(
+  Future<http.Response> searchArtSuggestions(
       String imgId, List<String>? discardedArtList, int type) async {
     final response = await http.post(
       Uri.parse('$baseUrl/search-art-suggestions'),
@@ -42,11 +38,15 @@ class ArtSuggestionsAPI {
       },
     );
 
+    return response;
+
+    /**
     if (response.statusCode == 200) {
       final Map<String, dynamic> responseData = jsonDecode(response.body);
       return ArtSuggestions.fromJson(responseData);
     } else {
       throw Exception('Failed to load data');
     }
+     */
   }
 }

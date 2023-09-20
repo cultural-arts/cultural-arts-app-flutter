@@ -1,12 +1,18 @@
+import 'dart:convert';
+
+import 'package:camera/camera.dart';
+import 'package:cultural_arts/api/art_suggestion_api.dart';
+import 'package:cultural_arts/api/classes/art_suggestions.dart';
+import 'package:cultural_arts/api/communication_driver.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'api/log_api.dart';
 
 class UploadPhoto extends StatefulWidget {
-  const UploadPhoto({super.key, required this.imagePath});
+  const UploadPhoto({super.key, required this.acquiredImage});
 
-  final String imagePath;
+  final XFile acquiredImage;
 
   @override
   State<UploadPhoto> createState() => _MyUploadPhotoState();
@@ -14,7 +20,7 @@ class UploadPhoto extends StatefulWidget {
 
 class _MyUploadPhotoState extends State<UploadPhoto> {
   // variables to store widget data
-  late String imagePath;
+  late XFile acquiredImage;
 
   // variables to store state data
   bool photoUploadedToCloud = false;
@@ -24,7 +30,7 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
   void initState() {
     super.initState();
     // obtain the image path by using widget*
-    imagePath = widget.imagePath;
+    acquiredImage = widget.acquiredImage;
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
       try {
         uploadPhoto();
@@ -41,12 +47,49 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
     );
   }
 
-  void uploadPhoto() {
+  void uploadPhoto() async {
     uploadAttempts--;
+    String? base64Image;
 
-    var imageObject = Image.network(imagePath);
+    // encode image as base64
+    final imageBytes = await acquiredImage.readAsBytes();
+    base64Image = base64Encode(imageBytes);
 
-    var caLogs = CulturalArtsLogAPI(baseUrl: "baseUrl");
+    Map<String, String> exifData = {};
+    exifData['latitude'] = '45.506146';
+    exifData['longitude'] = '11.860613';
+
+    var artSuggestionsAPI =
+        ArtSuggestionsAPI(baseUrl: CommunicationDriver.baseURL);
+
+    final response =
+        await artSuggestionsAPI.searchPerfectMatch(base64Image, exifData);
+
+    switch (response.statusCode) {
+      case 200:
+        break;
+      case CommunicationDriver.http230CulturalArtsServerUnderMaintenance:
+        myDialogBuilder(
+            "Server Error", "Server is under maintenance", Icons.warning);
+        break;
+      case CommunicationDriver.http227CulturalArtsFoundPerfectMatch:
+        final perfectMatch = ArtSuggestions.fromJson(jsonDecode(response.body));
+        // Navigate to the presentation activity with perfectMatch
+        break;
+      case CommunicationDriver.http228CulturalArtsFoundFirstStrikeSuggestions:
+        break;
+      case CommunicationDriver.http229CulturalArtsFoundSecondStrikeSuggestions:
+        break;
+      case CommunicationDriver.http231CulturalArtsNoResultsFound:
+        myDialogBuilder("No results found", "Sorry for this", Icons.warning);
+        break;
+      case CommunicationDriver.http452CulturalArtsInvalidImg:
+        break;
+      case CommunicationDriver.http453CulturalArtsInvalidGpsCoordinates:
+        break;
+      case CommunicationDriver.http454CulturalArtsInappropriateContent:
+        break;
+    }
 
     /**
 
