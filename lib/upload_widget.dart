@@ -10,6 +10,7 @@ import 'package:geolocator/geolocator.dart';
 
 import 'api/log_api.dart';
 import 'utils/geo_utilities.dart';
+import 'dart:ui';
 
 class UploadPhoto extends StatefulWidget {
   const UploadPhoto({super.key, required this.acquiredImage});
@@ -27,6 +28,8 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
   // variables to store state data
   bool photoUploadedToCloud = false;
   int uploadAttempts = 3;
+  String? base64Image; // the base64 image version
+  Map<String, String> exifData = {}; // the exif data container
 
   @override
   void initState() {
@@ -51,14 +54,17 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
 
   void uploadPhoto() async {
     uploadAttempts--;
-    String? base64Image;
 
     // encode image as base64
-    final imageBytes = await acquiredImage.readAsBytes();
-    base64Image = base64Encode(imageBytes);
+    Uint8List imageBytes = await acquiredImage.readAsBytes();
 
-    // prepare the exif data container
-    Map<String, String> exifData = {};
+    // obtain image width and height
+    var image = await decodeImageFromList(imageBytes);
+    exifData['ImageLength'] = image.height.toString();
+    exifData['ImageWidth'] = image.width.toString();
+
+    // encode image to send
+    base64Image = base64Encode(imageBytes);
 
     // add gps location provider with geolocator
     Position currentPosition = await getPosition();
@@ -79,7 +85,7 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
         ArtSuggestionsAPI(baseUrl: CommunicationDriver.baseURL);
 
     final response =
-        await artSuggestionsAPI.searchPerfectMatch(base64Image, exifData);
+        await artSuggestionsAPI.searchPerfectMatch(base64Image!, exifData);
 
     switch (response.statusCode) {
       case 200:
@@ -106,50 +112,6 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
       case CommunicationDriver.http454CulturalArtsInappropriateContent:
         break;
     }
-
-    /**
-
-    var exifData;
-    try {
-      exifData = ExifInterface(filePath);
-    } on PlatformException catch (e) {
-      // TODO think what to do in this case
-      ca_logs.sendLog(context, CulturalArtsLog.SEVERITY_ERROR, "Error on ExifInterface read: $e");
-    }
-    final prepareExif = PrepareExifData(exifData);
-    final preparedExif = prepareExif.preparedExifData;
-    final latitude = photoParcelable!.photoLatitude;
-    final longitude = photoParcelable!.photoLongitude;
-
-    if (Utils.isGpsValidCoordinates(latitude, longitude)) {
-      preparedExif["GPSLatitude"] = latitude;
-      preparedExif["GPSLongitude"] = longitude;
-    } else {
-      preparedExif["OriginalGPSLatitude"] = latitude;
-      preparedExif["OriginalGPSLongitude"] = longitude;
-      preparedExif["GPSLatitude"] = Utils.DEFAULT_LATITUDE;
-      preparedExif["GPSLongitude"] = Utils.DEFAULT_LONGITUDE;
-    }
-
-    final picture = File(filePath);
-    if (picture.existsSync()) {
-      final myBitmap = BitmapFactory.decodeFile(picture.absolutePath);
-      if (myBitmap == null) {
-        // TODO think what to do in this case
-        ca_logs.sendLog(context, CulturalArtsLog.SEVERITY_ERROR, "Null reference bitmap.");
-      } else {
-        final byteArrayOutputStream = ByteArrayOutputStream();
-        myBitmap.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream);
-        final imgBytes = byteArrayOutputStream.toByteArray();
-        final encodedPhoto = base64Encode(imgBytes);
-
-        
-      }
-    } else {
-      // TODO think what to do in this case
-      ca_logs.sendLog(context, CulturalArtsLog.SEVERITY_ERROR, "The photo to load does not exist");
-    }
-     */
   }
 
   void myDialogBuilder(String title, String msg, IconData iconData) {
@@ -170,63 +132,3 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
     );
   }
 }
-
-/**
-
-class UploadPhotoState extends State<UploadPhoto> {
-  TextEditingController messageController = TextEditingController();
-  bool photoUploadToCloudDone = false;
-  UtilsPhotoParcelable? photoParcelable;
-  int uploadAttemptsCounter = 2;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance?.addPostFrameCallback((_) {
-      try {
-        photoParcelable = ModalRoute.of(context)!.settings.arguments as UtilsPhotoParcelable;
-        uploadPhotos();
-      } catch (e) {
-        myDialogBuilder("Error", "No photos found", Icons.warning);
-      }
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text("Upload Photo"),
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(
-              value: photoUploadToCloudDone ? 1.0 : null,
-            ),
-            TextField(
-              controller: messageController,
-              decoration: InputDecoration(
-                hintText: "Message",
-              ),
-            ),
-            if (photoUploadToCloudDone)
-              Icon(
-                Icons.done,
-                size: 48.0,
-                color: Colors.green,
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void storePhotoParcelableToInternalDB() {
-    // add the photo(s) to the app's Room database in order to display it on the main page
-    final photoTaken = PhotoTaken(photoParcelable!);
-    photosTakenViewModel.insert(photoTaken);
-  }
-
-}*/
