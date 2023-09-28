@@ -21,6 +21,7 @@ class TakePictureScreenState extends State<TakePictureScreen> {
   @override
   void initState() {
     super.initState();
+    _initializeControllerFuture = null;
     _initializeCamera();
   }
 
