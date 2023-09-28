@@ -56,7 +56,7 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
     final List<String> keyValuePairs = [];
 
     data.forEach((key, value) {
-      keyValuePairs.add('$key:$value');
+      keyValuePairs.add('$key=$value');
     });
 
     return '{${keyValuePairs.join(',')}}';

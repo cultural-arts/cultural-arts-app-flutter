@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'camera_screen.dart'; // Import the camera screen file
+import 'utils/geo_utilities.dart';
 
 void main() {
   runApp(const MyApp());
@@ -67,6 +69,16 @@ class _MyHomePageState extends State<MyHomePage> {
       // called again, and so nothing would appear to happen.
       enableTakePicture = true;
     });
+  }
+
+  Future<void> initPosition() async {
+    Position currentPosition = await getPosition();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    initPosition();
   }
 
   @override
