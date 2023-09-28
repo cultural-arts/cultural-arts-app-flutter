@@ -52,6 +52,16 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
     );
   }
 
+  String formatMapToString(Map<String, String> data) {
+    final List<String> keyValuePairs = [];
+
+    data.forEach((key, value) {
+      keyValuePairs.add('$key:$value');
+    });
+
+    return '{${keyValuePairs.join(',')}}';
+  }
+
   void uploadPhoto() async {
     uploadAttempts--;
 
@@ -81,11 +91,13 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
       exifData["GPSLongitude"] = defaultLongitude;
     }
 
+    final formattedExifData = formatMapToString(exifData);
+
     var artSuggestionsAPI =
         ArtSuggestionsAPI(baseUrl: CommunicationDriver.baseURL);
 
-    final response =
-        await artSuggestionsAPI.searchPerfectMatch(base64Image!, exifData);
+    final response = await artSuggestionsAPI.searchPerfectMatch(
+        base64Image!, formattedExifData);
 
     switch (response.statusCode) {
       case 200:

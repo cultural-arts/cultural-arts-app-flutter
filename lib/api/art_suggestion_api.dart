@@ -9,7 +9,7 @@ class ArtSuggestionsAPI {
   ArtSuggestionsAPI({required this.baseUrl});
 
   Future<http.Response> searchPerfectMatch(
-      String encodedPhoto, Map<String, String?> exif) async {
+      String encodedPhoto, String exif) async {
     final response = await http.post(
       Uri.parse('$baseUrl/search-perfect-match'),
       headers: <String, String>{
@@ -17,7 +17,7 @@ class ArtSuggestionsAPI {
       },
       body: {
         'encoded_photo': encodedPhoto,
-        'exif': jsonEncode(exif),
+        'exif': exif,
       },
     );
 
