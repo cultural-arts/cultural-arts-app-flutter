@@ -18,11 +18,12 @@ Future<LocationPermission> initPosition() async {
 
   // Request location permission
   permission = await Geolocator.checkPermission();
-  if (permission == LocationPermission.denied) {
+  if (permission == LocationPermission.denied ||
+      permission == LocationPermission.deniedForever) {
     return await Geolocator.requestPermission();
   }
 
-  return LocationPermission.unableToDetermine;
+  return permission;
 }
 
 class MyApp extends StatefulWidget {
@@ -34,19 +35,22 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   // Initialize a variable to track whether location data has been loaded
-  late LocationPermission locationDataLoaded =
+  late LocationPermission locationDataState =
       LocationPermission.unableToDetermine;
+
+  void updateLocationDataState() {
+    initPosition().then((value) {
+      setState(() {
+        locationDataState = value;
+      });
+    });
+  }
 
   @override
   void initState() {
     super.initState();
-
     // Call initPosition() asynchronously and wait for it to complete
-    initPosition().then((value) {
-      setState(() {
-        locationDataLoaded = value;
-      });
-    });
+    updateLocationDataState();
   }
 
   @override
@@ -57,23 +61,62 @@ class _MyAppState extends State<MyApp> {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: _buildHomeWidget(locationDataLoaded),
+      home: _buildHomeWidget(locationDataState, updateLocationDataState),
     );
   }
 }
 
-Widget _buildHomeWidget(LocationPermission locationDataLoaded) {
-  switch (locationDataLoaded) {
+Widget _buildHomeWidget(LocationPermission locationDataState,
+    void Function() askForLocationsPermission) {
+  switch (locationDataState) {
     case LocationPermission.whileInUse:
       return const MyHomePage(title: 'cultural-arts.com');
     case LocationPermission.always:
       return const MyHomePage(title: 'cultural-arts.com');
     case LocationPermission.denied:
-      return const LoadingScreen();
+      return LocationPermissionWidget(
+        onPermissionRequested: () {
+          askForLocationsPermission();
+        },
+      );
     case LocationPermission.deniedForever:
-      return const LoadingScreen();
+      return LocationPermissionWidget(
+        onPermissionRequested: () {
+          askForLocationsPermission();
+        },
+      );
     default:
       return const LoadingScreen();
+  }
+}
+
+class LocationPermissionWidget extends StatelessWidget {
+  final VoidCallback onPermissionRequested;
+
+  const LocationPermissionWidget(
+      {super.key, required this.onPermissionRequested});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: <Widget>[
+        const Text(
+          'To use this app, we need your location permission.',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 18),
+        ),
+        const SizedBox(height: 20),
+        ElevatedButton(
+          onPressed: () {
+            // Call the provided callback to request location permission
+            onPermissionRequested();
+          },
+          child: const Text('Grant Location Permission'),
+        ),
+      ],
+    );
   }
 }
 
