@@ -69,14 +69,13 @@ class TakePictureScreenState extends State<TakePictureScreen> {
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.done) {
               // If the Future is complete, display the preview.
+              final scale = 1 /
+                  (_controller.value.aspectRatio *
+                      MediaQuery.of(context).size.aspectRatio);
               return Transform.scale(
-                scale: _controller.value.aspectRatio /
-                    MediaQuery.of(context).size.aspectRatio,
+                scale: scale,
                 child: Center(
-                  child: AspectRatio(
-                    aspectRatio: 1.0 / _controller.value.aspectRatio,
-                    child: CameraPreview(_controller),
-                  ),
+                  child: CameraPreview(_controller),
                 ),
               );
             } else {
