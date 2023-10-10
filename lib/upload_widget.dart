@@ -48,7 +48,35 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Upload Widget')),
+      backgroundColor: Theme.of(context).primaryColor,
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            const Text(
+              "cultural-arts.com",
+              style: TextStyle(
+                color: Colors.white, // Title text color
+                fontSize: 24.0, // Title text font size
+              ),
+            ),
+            const SizedBox(height: 32.0),
+            Image.asset(
+              'assets/images/custom_icons_il_santo.png', // Replace with the path to your custom PNG icon
+            ),
+            const SizedBox(height: 32.0), // Space between spinner and icon
+            const Text(
+              "searching for arts...",
+              style: TextStyle(
+                color: Colors.white, // Title text color
+              ),
+            ),
+            const SizedBox(height: 16.0),
+            const CircularProgressIndicator(
+                color: Colors.white), // Loading spinner
+          ],
+        ),
+      ),
     );
   }
 
@@ -116,6 +144,7 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
         break;
       case CommunicationDriver.http231CulturalArtsNoResultsFound:
         myDialogBuilder("No results found", "Sorry for this", Icons.warning);
+        // Navigator.of(context).pop();
         break;
       case CommunicationDriver.http452CulturalArtsInvalidImg:
         break;
