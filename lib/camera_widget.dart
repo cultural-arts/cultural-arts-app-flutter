@@ -57,11 +57,19 @@ class TakePictureScreenState extends State<TakePictureScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Take a picture')),
+      appBar: CustomAppBar(),
       // You must wait until the controller is initialized before displaying the
       // camera preview. Use a FutureBuilder to display a loading spinner until the
       // controller has finished initializing.
       body: Container(
+        // This container will take up the entire screen
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Colors.blue, Colors.transparent],
+          ),
+        ),
         // Enforce portrait orientation and take up the full screen
         constraints: const BoxConstraints.expand(),
         child: FutureBuilder<void>(
@@ -116,6 +124,24 @@ class TakePictureScreenState extends State<TakePictureScreen> {
           }
         },
         child: const Icon(Icons.camera_alt),
+      ),
+    );
+  }
+}
+
+class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
+  @override
+  Size get preferredSize => Size.fromHeight(kToolbarHeight);
+
+  @override
+  Widget build(BuildContext context) {
+    return AppBar(
+      backgroundColor: Colors.blue.withOpacity(0.5), // Add transparency here
+      leading: IconButton(
+        icon: Icon(Icons.arrow_back),
+        onPressed: () {
+          Navigator.of(context).pop(); // Add navigation logic here
+        },
       ),
     );
   }

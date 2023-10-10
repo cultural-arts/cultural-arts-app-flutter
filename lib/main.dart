@@ -58,7 +58,8 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp(
       title: 'cultural-arts.com app',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        colorScheme:
+            ColorScheme.fromSeed(seedColor: Color.fromRGBO(41, 182, 246, 1)),
         useMaterial3: true,
       ),
       home: _buildHomeWidget(locationDataState, updateLocationDataState),
@@ -169,8 +170,7 @@ class _MyHomePageState extends State<MyHomePage> {
       body: Container(
         decoration: const BoxDecoration(
           image: DecorationImage(
-            image: AssetImage(
-                'assets/images/take_statue_picture.png'), // Replace with your image path
+            image: AssetImage('assets/images/take_statue_picture.png'),
             fit: BoxFit.cover, // You can adjust the fit as needed
           ),
         ),
