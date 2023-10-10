@@ -33,7 +33,7 @@ class TakePictureScreenState extends State<TakePictureScreen> {
       _cameras = await availableCameras();
 
       // Initialize the controller with the first camera in the list
-      _controller = CameraController(_cameras.first, ResolutionPreset.medium,
+      _controller = CameraController(_cameras.last, ResolutionPreset.medium,
           enableAudio: false, imageFormatGroup: ImageFormatGroup.jpeg);
 
       // Initialize the controller. This returns a Future.
