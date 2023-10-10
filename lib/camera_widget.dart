@@ -61,17 +61,30 @@ class TakePictureScreenState extends State<TakePictureScreen> {
       // You must wait until the controller is initialized before displaying the
       // camera preview. Use a FutureBuilder to display a loading spinner until the
       // controller has finished initializing.
-      body: FutureBuilder<void>(
-        future: _initializeControllerFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.done) {
-            // If the Future is complete, display the preview.
-            return CameraPreview(_controller);
-          } else {
-            // Otherwise, display a loading indicator.
-            return const Center(child: CircularProgressIndicator());
-          }
-        },
+      body: Container(
+        // Enforce portrait orientation and take up the full screen
+        constraints: const BoxConstraints.expand(),
+        child: FutureBuilder<void>(
+          future: _initializeControllerFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.done) {
+              // If the Future is complete, display the preview.
+              return Transform.scale(
+                scale: _controller.value.aspectRatio /
+                    MediaQuery.of(context).size.aspectRatio,
+                child: Center(
+                  child: AspectRatio(
+                    aspectRatio: 1.0 / _controller.value.aspectRatio,
+                    child: CameraPreview(_controller),
+                  ),
+                ),
+              );
+            } else {
+              // Otherwise, display a loading indicator.
+              return const Center(child: CircularProgressIndicator());
+            }
+          },
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         // Provide an onPressed callback.
