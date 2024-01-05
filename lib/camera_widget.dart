@@ -76,15 +76,18 @@ class TakePictureScreenState extends State<TakePictureScreen> {
           future: _initializeControllerFuture,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.done) {
-              // If the Future is complete, display the preview.
-              final scale = 1 /
-                  (_controller.value.aspectRatio *
-                      MediaQuery.of(context).size.aspectRatio);
-              return Transform.scale(
-                scale: scale,
-                child: Center(
-                  child: CameraPreview(_controller),
-                ),
+              return OrientationBuilder(
+                builder: (context, orientation) {
+                  return Transform.rotate(
+                    angle: _getCameraAngle(orientation),
+                    child: Center(
+                      child: AspectRatio(
+                        aspectRatio: _controller.value.aspectRatio,
+                        child: CameraPreview(_controller),
+                      ),
+                    ),
+                  );
+                },
               );
             } else {
               // Otherwise, display a loading indicator.
@@ -126,6 +129,23 @@ class TakePictureScreenState extends State<TakePictureScreen> {
         child: const Icon(Icons.camera_alt),
       ),
     );
+  }
+
+  double _getCameraAngle(Orientation orientation) {
+    if (_controller.description.lensDirection == CameraLensDirection.front) {
+      return -(_getOrientationAngle(orientation));
+    } else {
+      return _getOrientationAngle(orientation);
+    }
+  }
+
+  double _getOrientationAngle(Orientation orientation) {
+    switch (orientation) {
+      case Orientation.portrait:
+        return 0;
+      case Orientation.landscape:
+        return -90;
+    }
   }
 }
 
