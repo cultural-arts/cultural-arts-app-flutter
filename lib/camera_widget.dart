@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:cultural_arts/upload_widget.dart';
 import 'package:flutter/material.dart';
+import 'dart:math' as math; // Import the math library
 
 // A screen that allows users to take a picture using a given camera.
 class TakePictureScreen extends StatefulWidget {
@@ -144,7 +145,8 @@ class TakePictureScreenState extends State<TakePictureScreen> {
       case Orientation.portrait:
         return 0;
       case Orientation.landscape:
-        return -90;
+        // return math.pi / 2;
+        return 0;
     }
   }
 }
