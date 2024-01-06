@@ -3,6 +3,7 @@ import paramiko
 import pathlib
 from tqdm import tqdm  # Import the tqdm library
 import argparse
+import subprocess
 
 def get_password():
     return input("Enter your password: ")
@@ -62,12 +63,38 @@ def copy_files_to_remote(remote_user, remote_host, local_build, remote_build, pa
     
     print('Files copied to the remote server.')
 
+def modify_index_html(local_build):
+    index_html_path = local_build / 'index.html'
+    try:
+        with open(index_html_path, 'r') as file:
+            content = file.read()
+        
+        # Perform string replacements
+        content = content.replace('href="/"', 'href="/webapp/"')
+        content = content.replace('href="favicon.png"', 'href="/webapp/favicon.png"')
+        content = content.replace('href="manifest.json"', 'href="/webapp/manifest.json"')
+        content = content.replace('src="flutter.js"', 'src="/webapp/flutter.js"')
+        
+        # Write the modified content back to the file
+        with open(index_html_path, 'w') as file:
+            file.write(content)
+    except FileNotFoundError:
+        print("index.html file not found. Skipping modifications.")
+
+def run_flutter_build(project_root):
+    try:
+        subprocess.run(['flutter', 'build', 'web'], check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"Flutter build failed with error: {e}")
+        raise
+
 def main():
     parser = argparse.ArgumentParser(description='Copy files to a remote server over SSH')
     parser.add_argument('--user', required=True, help='Remote user')
     parser.add_argument('--host', required=True, help='Remote host')
     parser.add_argument('--local_build', required=True, help='Path to local build directory')
     parser.add_argument('--remote_build', required=True, help='Path on the remote server for build files')
+    parser.add_argument('--project_root', required=True, help='Project root')
     parser.add_argument('--password', help='Password for authentication')
     args = parser.parse_args()
 
@@ -75,6 +102,8 @@ def main():
         args.password = get_password()  # Prompt for password if not provided
     
     local_build = pathlib.Path(args.local_build)
+
+    modify_index_html(local_build)
     
     copy_files_to_remote(args.user, args.host, local_build, args.remote_build, args.password)
 

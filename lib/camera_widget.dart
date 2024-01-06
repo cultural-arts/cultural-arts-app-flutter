@@ -58,7 +58,7 @@ class TakePictureScreenState extends State<TakePictureScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: CustomAppBar(),
+      // appBar: CustomAppBar(),
       // You must wait until the controller is initialized before displaying the
       // camera preview. Use a FutureBuilder to display a loading spinner until the
       // controller has finished initializing.
@@ -145,7 +145,6 @@ class TakePictureScreenState extends State<TakePictureScreen> {
       case Orientation.portrait:
         return 0;
       case Orientation.landscape:
-        // return math.pi / 2;
         return 0;
     }
   }
