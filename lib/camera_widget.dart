@@ -58,7 +58,6 @@ class TakePictureScreenState extends State<TakePictureScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // appBar: CustomAppBar(),
       body: Container(
         // This container will take up the entire screen
         decoration: const BoxDecoration(

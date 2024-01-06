@@ -143,8 +143,10 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
       case CommunicationDriver.http229CulturalArtsFoundSecondStrikeSuggestions:
         break;
       case CommunicationDriver.http231CulturalArtsNoResultsFound:
-        myDialogBuilder("No results found", "Sorry for this", Icons.warning);
-        // Navigator.of(context).pop();
+        myDialogBuilder(
+            "No results found",
+            "We haven't found any Art, but your support will help us to improve",
+            Icons.warning);
         break;
       case CommunicationDriver.http452CulturalArtsInvalidImg:
         break;
