@@ -1,16 +1,12 @@
 import 'dart:convert';
-
-import 'package:camera/camera.dart';
-import 'package:cultural_arts/api/art_suggestion_api.dart';
-import 'package:cultural_arts/api/classes/art_suggestions.dart';
 import 'package:cultural_arts/api/communication_driver.dart';
+import 'package:camera/camera.dart';
+import 'package:cultural_arts/api/art_defect_detection_api.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 
-import 'api/log_api.dart';
 import 'utils/geo_utilities.dart';
-import 'dart:ui';
 
 class UploadPhoto extends StatefulWidget {
   const UploadPhoto({super.key, required this.acquiredImage});
@@ -30,6 +26,7 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
   int uploadAttempts = 3;
   String? base64Image; // the base64 image version
   Map<String, String> exifData = {}; // the exif data container
+  Uint8List? uploadedImageBytes; // Added variable to store uploaded image bytes
 
   @override
   void initState() {
@@ -49,34 +46,41 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).primaryColor,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text(
-              "cultural-arts.com",
-              style: TextStyle(
-                color: Colors.white, // Title text color
-                fontSize: 24.0, // Title text font size
+      body: photoUploadedToCloud
+          ? Image.memory(
+              uploadedImageBytes!,
+              height: MediaQuery.of(context).size.height,
+              width: MediaQuery.of(context).size.width,
+            )
+          : Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  const Text(
+                    "cultural-arts.com",
+                    style: TextStyle(
+                      color: Colors.white, // Title text color
+                      fontSize: 24.0, // Title text font size
+                    ),
+                  ),
+                  const SizedBox(height: 32.0),
+                  Image.asset(
+                    'assets/images/custom_icons_il_santo.png', // Replace with the path to your custom PNG icon
+                  ),
+                  const SizedBox(
+                      height: 32.0), // Space between spinner and icon
+                  const Text(
+                    "detecting bio-colonization defects...",
+                    style: TextStyle(
+                      color: Colors.white, // Title text color
+                    ),
+                  ),
+                  const SizedBox(height: 16.0),
+                  const CircularProgressIndicator(
+                      color: Colors.white), // Loading spinner
+                ],
               ),
             ),
-            const SizedBox(height: 32.0),
-            Image.asset(
-              'assets/images/custom_icons_il_santo.png', // Replace with the path to your custom PNG icon
-            ),
-            const SizedBox(height: 32.0), // Space between spinner and icon
-            const Text(
-              "searching for arts...",
-              style: TextStyle(
-                color: Colors.white, // Title text color
-              ),
-            ),
-            const SizedBox(height: 16.0),
-            const CircularProgressIndicator(
-                color: Colors.white), // Loading spinner
-          ],
-        ),
-      ),
     );
   }
 
@@ -121,38 +125,38 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
 
     final formattedExifData = formatMapToString(exifData);
 
-    var artSuggestionsAPI =
-        ArtSuggestionsAPI(baseUrl: CommunicationDriver.baseURL);
+    var artDefectDetectionAPI =
+        ArtDefectDetectionAPI(baseUrl: CommunicationDriver.baseURL);
 
-    final response = await artSuggestionsAPI.searchPerfectMatch(
+    final response = await artDefectDetectionAPI.getBioColonizationDefects(
         base64Image!, formattedExifData);
 
     switch (response.statusCode) {
       case 200:
+        // Assuming response.body contains the image bytes
+        Uint8List imageBytes = base64Decode(response.body);
+
+        // Use the Image.memory widget to display the image
+        Widget imageWidget = Image.memory(imageBytes);
+
+        // Now, you can use this imageWidget wherever you need to display the image.
+        // For example, you might replace the CircularProgressIndicator with the imageWidget.
+        setState(() {
+          photoUploadedToCloud = true;
+          uploadedImageBytes = base64Decode(response.body);
+        });
         break;
-      case CommunicationDriver.http230CulturalArtsServerUnderMaintenance:
+      case 500:
         myDialogBuilder(
-            "Server Error", "Server is under maintenance", Icons.warning);
+            "Internal Server Error", "Try again later", Icons.error);
         break;
-      case CommunicationDriver.http227CulturalArtsFoundPerfectMatch:
-        final perfectMatch = ArtSuggestions.fromJson(jsonDecode(response.body));
-        // Navigate to the presentation activity with perfectMatch
-        break;
-      case CommunicationDriver.http228CulturalArtsFoundFirstStrikeSuggestions:
-        break;
-      case CommunicationDriver.http229CulturalArtsFoundSecondStrikeSuggestions:
-        break;
-      case CommunicationDriver.http231CulturalArtsNoResultsFound:
+      case 429:
+        // https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429
         myDialogBuilder(
-            "No results found",
-            "We haven't found any Art, but your support will help us to improve",
+            "Daily Limit Reached",
+            "You have reached the daily limit of calls. If you are interested"
+                "in a unlimited service contact info@cultural-arts.com",
             Icons.warning);
-        break;
-      case CommunicationDriver.http452CulturalArtsInvalidImg:
-        break;
-      case CommunicationDriver.http453CulturalArtsInvalidGpsCoordinates:
-        break;
-      case CommunicationDriver.http454CulturalArtsInappropriateContent:
         break;
     }
   }

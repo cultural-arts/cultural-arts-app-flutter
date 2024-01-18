@@ -199,41 +199,47 @@ class _MyHomePageState extends State<MyHomePage> {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: <Widget>[
                 const Text(
-                  'Try our service by taking a picture!',
+                  'Detect defects in art by taking a picture!',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                       fontSize: 20,
                       color: Colors.black), // Adjust the color as needed
                 ),
                 const SizedBox(height: 20),
-                RichText(
-                  textAlign: TextAlign.center,
-                  text: const TextSpan(
-                    text: 'Interested in ',
-                    style: TextStyle(fontSize: 16, color: Colors.black),
-                    children: [
-                      TextSpan(
-                        text: 'high-resolution outcomes',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      TextSpan(
-                        text: ' or',
-                      ),
-                      TextSpan(
-                        text: ' integration with a surveillance camera',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      TextSpan(
-                        text: '? contact us at ',
-                      ),
-                      TextSpan(
-                        text: 'info@cultural-arts.com',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold, color: Colors.blue),
-                      )
-                    ],
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16.0), // Adjust the padding as needed
+                  child: RichText(
+                    textAlign: TextAlign.center,
+                    text: const TextSpan(
+                      text: 'Interested in ',
+                      style: TextStyle(fontSize: 16, color: Colors.black),
+                      children: [
+                        TextSpan(
+                          text: 'high-resolution outcomes',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        TextSpan(
+                          text: ' or',
+                        ),
+                        TextSpan(
+                          text: ' integration with a surveillance camera',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        TextSpan(
+                          text: '? Contact us at ',
+                        ),
+                        TextSpan(
+                          text: 'info@cultural-arts.com',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
+                )
               ],
             ),
           ),
