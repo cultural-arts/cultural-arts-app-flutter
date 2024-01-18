@@ -161,46 +161,97 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Text(widget.title),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(widget.title),
+            const SizedBox(height: 8),
+            const Text(
+              "Bio Colonization Detection v0.1",
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
       ),
-      body: Container(
-        decoration: const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage('assets/images/take_statue_picture.png'),
-            fit: BoxFit.cover, // You can adjust the fit as needed
+      body: Stack(
+        children: [
+          // Use ColorFiltered to apply opacity to the background image
+          ColorFiltered(
+            colorFilter: ColorFilter.mode(
+              const Color.fromARGB(255, 255, 255, 255)
+                  .withOpacity(0.90), // Adjust the opacity as needed
+              BlendMode.srcOver,
+            ),
+            child: Image.asset(
+              'assets/images/take_statue_picture.png',
+              fit: BoxFit.cover,
+              width: MediaQuery.of(context).size.width,
+              height: MediaQuery.of(context).size.height,
+            ),
           ),
-        ),
-        child: GridView.builder(
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
+          Center(
+            // Ensure the Column is centered within the Stack
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: <Widget>[
+                const Text(
+                  'Try our service by taking a picture!',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      fontSize: 20,
+                      color: Colors.black), // Adjust the color as needed
+                ),
+                const SizedBox(height: 20),
+                RichText(
+                  textAlign: TextAlign.center,
+                  text: const TextSpan(
+                    text: 'Interested in ',
+                    style: TextStyle(fontSize: 16, color: Colors.black),
+                    children: [
+                      TextSpan(
+                        text: 'high-resolution outcomes',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      TextSpan(
+                        text: ' or',
+                      ),
+                      TextSpan(
+                        text: ' integration with a surveillance camera',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      TextSpan(
+                        text: '? contact us at ',
+                      ),
+                      TextSpan(
+                        text: 'info@cultural-arts.com',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, color: Colors.blue),
+                      )
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
-          itemCount: 0,
-          itemBuilder: (BuildContext context, int index) {
-            return Card(
-              child: Center(
-                child: Text('Item $index'),
-              ),
-            );
-          },
-        ),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) =>
-                  const CameraScreen(), // Navigate to CameraScreen
+              builder: (context) => const CameraScreen(),
             ),
           );
         },
         tooltip: 'Take picture',
         child: const Icon(Icons.add_a_photo),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 }
