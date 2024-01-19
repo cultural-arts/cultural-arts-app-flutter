@@ -26,7 +26,7 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
   int uploadAttempts = 3;
   String? base64Image; // the base64 image version
   Map<String, String> exifData = {}; // the exif data container
-  Uint8List? uploadedImageBytes; // Added variable to store uploaded image bytes
+  Uint8List? generatedImage; // Added variable to store uploaded image bytes
 
   @override
   void initState() {
@@ -48,7 +48,7 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
       backgroundColor: Theme.of(context).primaryColor,
       body: photoUploadedToCloud
           ? Image.memory(
-              uploadedImageBytes!,
+              generatedImage!,
               height: MediaQuery.of(context).size.height,
               width: MediaQuery.of(context).size.width,
             )
@@ -143,7 +143,7 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
         // For example, you might replace the CircularProgressIndicator with the imageWidget.
         setState(() {
           photoUploadedToCloud = true;
-          uploadedImageBytes = base64Decode(response.body);
+          generatedImage = base64Decode(response.body['image']);
         });
         break;
       case 500:
