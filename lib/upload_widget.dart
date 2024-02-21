@@ -133,17 +133,17 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
 
     switch (response.statusCode) {
       case 200:
-        // Assuming response.body contains the image bytes
-        Uint8List imageBytes = base64Decode(response.body);
+        var decodedResponse =
+            jsonDecode(utf8.decode(response.bodyBytes)) as Map;
 
-        // Use the Image.memory widget to display the image
-        Widget imageWidget = Image.memory(imageBytes);
+        // Assuming response.body contains the image bytes
+        Uint8List decodedImg = base64Decode(decodedResponse['image']);
 
         // Now, you can use this imageWidget wherever you need to display the image.
         // For example, you might replace the CircularProgressIndicator with the imageWidget.
         setState(() {
           photoUploadedToCloud = true;
-          generatedImage = base64Decode(response.body['image']);
+          generatedImage = decodedImg;
         });
         break;
       case 500:
@@ -152,11 +152,14 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
         break;
       case 429:
         // https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429
+        //myDialogBuilder(
+        // response.body['detail'], response.body['message'], Icons.warning);
+        break;
+      case 403:
         myDialogBuilder(
-            "Daily Limit Reached",
-            "You have reached the daily limit of calls. If you are interested"
-                "in a unlimited service contact info@cultural-arts.com",
-            Icons.warning);
+            "Access Forbidden",
+            "You may have reached the daily limit, please contact info@cultural-arts.com",
+            Icons.error);
         break;
     }
   }
