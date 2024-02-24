@@ -187,7 +187,7 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
             child: Image.asset(
               'assets/images/take_statue_picture.png',
-              fit: BoxFit.cover,
+              fit: BoxFit.contain,
               width: MediaQuery.of(context).size.width,
               height: MediaQuery.of(context).size.height,
             ),
@@ -199,10 +199,11 @@ class _MyHomePageState extends State<MyHomePage> {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: <Widget>[
                 const Text(
-                  'Detect defects in art by taking a picture!',
+                  'Detect defects in arts by taking a picture!',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                      fontSize: 20,
+                      fontSize: 35,
+                      fontWeight: FontWeight.bold,
                       color: Colors.black), // Adjust the color as needed
                 ),
                 const SizedBox(height: 20),
@@ -239,7 +240,15 @@ class _MyHomePageState extends State<MyHomePage> {
                       ],
                     ),
                   ),
-                )
+                ),
+                const SizedBox(height: 40),
+                const Text(
+                  'NOTICE: maximum 100 calls/day per ip due to computational resources',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.black), // Adjust the color as needed
+                ),
               ],
             ),
           ),

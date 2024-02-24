@@ -66,6 +66,8 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
                   const SizedBox(height: 32.0),
                   Image.asset(
                     'assets/images/custom_icons_il_santo.png', // Replace with the path to your custom PNG icon
+                    fit: BoxFit.contain,
+                    height: MediaQuery.of(context).size.height / 2,
                   ),
                   const SizedBox(
                       height: 32.0), // Space between spinner and icon
