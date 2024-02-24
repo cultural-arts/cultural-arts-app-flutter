@@ -70,10 +70,10 @@ def modify_index_html(local_build):
             content = file.read()
         
         # Perform string replacements
-        content = content.replace('href="/"', 'href="/webapp/"')
-        content = content.replace('href="favicon.png"', 'href="/webapp/favicon.png"')
-        content = content.replace('href="manifest.json"', 'href="/webapp/manifest.json"')
-        content = content.replace('src="flutter.js"', 'src="/webapp/flutter.js"')
+        content = content.replace('href="/"', 'href="/bio-colonization/"')
+        content = content.replace('href="favicon.png"', 'href="/bio-colonization/favicon.png"')
+        content = content.replace('href="manifest.json"', 'href="/bio-colonization/manifest.json"')
+        content = content.replace('src="flutter.js"', 'src="/bio-colonization/flutter.js"')
         
         # Write the modified content back to the file
         with open(index_html_path, 'w') as file:
