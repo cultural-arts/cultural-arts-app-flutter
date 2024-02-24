@@ -1,9 +1,10 @@
 import os
 import paramiko
 import pathlib
-from tqdm import tqdm  # Import the tqdm library
 import argparse
 import subprocess
+from tqdm import tqdm  # Import the tqdm library
+from loguru import logger
 
 def get_password():
     return input("Enter your password: ")
@@ -100,6 +101,16 @@ def main():
 
     if not args.password:
         args.password = get_password()  # Prompt for password if not provided
+
+    dirname = os.path.dirname(os.path.dirname(__file__))
+
+    logger.info('Clean flutter project...')
+    subprocess.call(['flutter', 'clean'], cwd=dirname, shell=True)
+    logger.info('Project cleaned!')
+
+    logger.info('Build project...')
+    subprocess.call(['flutter', 'build', 'web'], cwd=dirname, shell=True)
+    logger.info('Project built!')
     
     local_build = pathlib.Path(args.local_build)
 
