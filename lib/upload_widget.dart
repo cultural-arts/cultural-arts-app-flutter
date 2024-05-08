@@ -46,9 +46,9 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
     // in fact the documentation says "callback after the last frame..."
     SchedulerBinding.instance.addPostFrameCallback((timeStamp) {
       try {
-        uploadPhoto();
+        uploadPhoto(context);
       } on PlatformException catch (e) {
-        myDialogBuilder("Error 01", "$e", Icons.error);
+        myDialogBuilder(context, "Error 01", "$e", Icons.error);
       }
     },);
 
@@ -95,7 +95,7 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
     return '{${keyValuePairs.join(',')}}';
   }
 
-  void uploadPhoto() async {
+  void uploadPhoto(context) async {
     uploadAttempts--;
 
     // encode image as base64
@@ -136,8 +136,12 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
       case 200:
         break;
       case CommunicationDriver.http230CulturalArtsServerUnderMaintenance:
-        myDialogBuilder( 
-            "Server Error", "Server is under maintenance", Icons.warning);
+        myDialogBuilder(
+          context, 
+          "Server Error", 
+          "The server is currently undergoing maintenance.", 
+          Icons.warning
+        );
         break;
       case CommunicationDriver.http227CulturalArtsFoundPerfectMatch:
         final perfectMatch = ArtSuggestions.fromJson(jsonDecode(response.body));
@@ -149,9 +153,11 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
         break;
       case CommunicationDriver.http231CulturalArtsNoResultsFound:
         myDialogBuilder(
-            "No results found",
-            "We haven't found any Art, but your support will help us to improve",
-            Icons.warning);
+          context, 
+          "No Results Found", 
+          "We couldn't find any art at the moment, but your support will help us improve.", 
+          Icons.warning
+        );
         break;
       case CommunicationDriver.http452CulturalArtsInvalidImg:
         break;
@@ -162,10 +168,10 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
     }
   }
 
-  void myDialogBuilder(title, String msg, IconData iconData) {
+  void myDialogBuilder(BuildContext context, String title, String msg, IconData iconData) {
     showDialog(
       context: context,
-      builder: (BuildContext context) => AlertDialog(
+      builder: (context) => AlertDialog(
         title: Text(title),
         content: Text(msg),
         actions: [
@@ -177,6 +183,8 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
           ),
         ],
       ),
-    );
+    ).then((val) {
+      Navigator.of(context).pop();
+    });
   }
 }
