@@ -64,22 +64,23 @@ def copy_files_to_remote(remote_user, remote_host, local_build, remote_build, pa
     print('Files copied to the remote server.')
 
 def modify_index_html(local_build):
-    index_html_path = local_build / 'index.html'
-    try:
-        with open(index_html_path, 'r') as file:
-            content = file.read()
-        
-        # Perform string replacements
-        content = content.replace('href="/"', 'href="/webapp/"')
-        content = content.replace('href="favicon.png"', 'href="/webapp/favicon.png"')
-        content = content.replace('href="manifest.json"', 'href="/webapp/manifest.json"')
-        content = content.replace('src="flutter.js"', 'src="/webapp/flutter.js"')
-        
-        # Write the modified content back to the file
-        with open(index_html_path, 'w') as file:
-            file.write(content)
-    except FileNotFoundError:
-        print("index.html file not found. Skipping modifications.")
+    index_html_path : pathlib = local_build / 'index.html'
+    
+    if not index_html_path.exists():
+        raise FileNotFoundError("index.html file not found. Skipping modifications.")
+    
+    with open(index_html_path, 'r') as file:
+        content = file.read()
+    
+    # Perform string replacements
+    content = content.replace('href="/"', 'href="/webapp/"')
+    content = content.replace('href="favicon.png"', 'href="/webapp/favicon.png"')
+    content = content.replace('href="manifest.json"', 'href="/webapp/manifest.json"')
+    content = content.replace('src="flutter.js"', 'src="/webapp/flutter.js"')
+    
+    # Write the modified content back to the file
+    with open(index_html_path, 'w') as file:
+        file.write(content)
 
 def run_flutter_build(project_root):
     try:
