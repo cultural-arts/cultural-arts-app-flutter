@@ -5,6 +5,7 @@ import 'package:cultural_arts/api/art_suggestion_api.dart';
 import 'package:cultural_arts/api/classes/art_suggestions.dart';
 import 'package:cultural_arts/api/communication_driver.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 
@@ -36,20 +37,21 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
     super.initState();
     // obtain the image path by using widget*
     acquiredImage = widget.acquiredImage;
+  }
+
+  @override
+  Widget build(BuildContext context) {
 
     // when this callback is called we are sure that the widget is completely build and drawn,
     // in fact the documentation says "callback after the last frame..."
-    WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
+    SchedulerBinding.instance.addPostFrameCallback((timeStamp) {
       try {
         uploadPhoto();
       } on PlatformException catch (e) {
         myDialogBuilder("Error 01", "$e", Icons.error);
       }
-    });
-  }
+    },);
 
-  @override
-  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).primaryColor,
       body: Center(
@@ -134,7 +136,7 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
       case 200:
         break;
       case CommunicationDriver.http230CulturalArtsServerUnderMaintenance:
-        myDialogBuilder(
+        myDialogBuilder( 
             "Server Error", "Server is under maintenance", Icons.warning);
         break;
       case CommunicationDriver.http227CulturalArtsFoundPerfectMatch:
@@ -160,10 +162,10 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
     }
   }
 
-  void myDialogBuilder(String title, String msg, IconData iconData) {
+  void myDialogBuilder(title, String msg, IconData iconData) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (BuildContext context) => AlertDialog(
         title: Text(title),
         content: Text(msg),
         actions: [
