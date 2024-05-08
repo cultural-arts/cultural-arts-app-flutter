@@ -44,3 +44,4 @@ app.*.map.json
 /android/app/release
 
 .venv
+.vscode/launch.json
