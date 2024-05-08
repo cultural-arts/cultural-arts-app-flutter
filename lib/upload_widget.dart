@@ -36,6 +36,9 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
     super.initState();
     // obtain the image path by using widget*
     acquiredImage = widget.acquiredImage;
+
+    // when this callback is called we are sure that the widget is completely build and drawn,
+    // in fact the documentation says "callback after the last frame..."
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
       try {
         uploadPhoto();
