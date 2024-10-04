@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'dart:js_interop';
+import 'dart:js_interop_unsafe';
 
 import 'package:camera/camera.dart';
 import 'package:cultural_arts/api/art_suggestion_api.dart';
@@ -12,6 +14,8 @@ import 'package:geolocator/geolocator.dart';
 import 'api/log_api.dart';
 import 'utils/geo_utilities.dart';
 import 'dart:ui';
+
+String transformer = 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2';
 
 class UploadPhoto extends StatefulWidget {
   const UploadPhoto({super.key, required this.acquiredImage});
@@ -31,6 +35,9 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
   int uploadAttempts = 3;
   String? base64Image; // the base64 image version
   Map<String, String> exifData = {}; // the exif data container
+
+  // the goal here is to setup a solution with transformer.js
+  // https://github.com/dart-lang/sdk/issues/55465#issuecomment-2059917248
 
   @override
   void initState() {
@@ -152,12 +159,19 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
       case CommunicationDriver.http229CulturalArtsFoundSecondStrikeSuggestions:
         break;
       case CommunicationDriver.http231CulturalArtsNoResultsFound:
-        myDialogBuilder(
-          context, 
-          "No Results Found", 
-          "We couldn't find any art at the moment, but your support will help us improve.", 
-          Icons.warning
-        );
+        
+        // try to call here transformer.js
+
+        final trasf = await importModule(transformer).toDart;
+        final env = trasf.getProperty("env".toJS) as JSObject;
+        
+        env.setProperty("allowLocalModels".toJS, false.toJS);
+        env.setProperty("useBrowserCache".toJS, true.toJS);
+
+        final pipe = await ((trasf.callMethod('pipeline'.toJS, 'sentiment-analysis'.toJS, 'Xenova/distilbert-base-uncased-finetuned-sst-2-english'.toJS)) as JSPromise<Callable>).toDart;
+        final out = await (pipe.customCall('I like wine'.toJS) as JSPromise<JSAny>).toDart;
+        print("RES: ${stringify(out)}");
+
         break;
       case CommunicationDriver.http452CulturalArtsInvalidImg:
         break;
