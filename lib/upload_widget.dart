@@ -162,15 +162,7 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
         
         // try to call here transformer.js
 
-        final trasf = await importModule(transformer).toDart;
-        final env = trasf.getProperty("env".toJS) as JSObject;
         
-        env.setProperty("allowLocalModels".toJS, false.toJS);
-        env.setProperty("useBrowserCache".toJS, true.toJS);
-
-        final pipe = await ((trasf.callMethod('pipeline'.toJS, 'sentiment-analysis'.toJS, 'Xenova/distilbert-base-uncased-finetuned-sst-2-english'.toJS)) as JSPromise<Callable>).toDart;
-        final out = await (pipe.customCall('I like wine'.toJS) as JSPromise<JSAny>).toDart;
-        print("RES: ${stringify(out)}");
 
         break;
       case CommunicationDriver.http452CulturalArtsInvalidImg:
