@@ -15,8 +15,13 @@ Future<void> runTransformers() async {
 
   // pipeline returns a Promise (JSPromise), we do not call await 
   var partial = await analyzeSentiment("How love you?").toDart;
-  print(partial);
+
+  var items = partial.dartify() as List;
+  print(items[0]["label"]);
+  print(items[0]["score"]);
+
 }
+
 
 Future<void> main() async{
 
