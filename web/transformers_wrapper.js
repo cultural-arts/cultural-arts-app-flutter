@@ -6,7 +6,9 @@ let pipe = null;
 globalThis.isAnalyzeSentimentReady = false;
 
 (async function () {
-    pipe = await pipeline("sentiment-analysis");
+    pipe = await pipeline('sentiment-analysis', 'Xenova/distilbert-base-uncased-finetuned-sst-2-english', {
+        device: 'webgpu',
+    });
     console.log("transformers.js pipeline loaded successfully!");
 
     // Attach function to globalThis so Dart can access it

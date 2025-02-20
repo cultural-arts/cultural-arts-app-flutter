@@ -15,7 +15,7 @@ Future<void> runTransformers() async {
 
   // pipeline returns a Promise (JSPromise)
   // we cast to promise to Future and then call await
-  var partial = await analyzeSentiment("How love you?").toDart;
+  var partial = await analyzeSentiment("I hate yosaasd").toDart;
 
   var items = partial.dartify() as List;
   print(items[0]["label"]);
