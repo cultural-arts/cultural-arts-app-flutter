@@ -1,6 +1,5 @@
+import 'dart:js_interop';
 import 'dart:js';
-import 'dart:js_util';
-import 'package:js/js.dart';
 
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
@@ -9,19 +8,16 @@ import 'dart:async';
 import 'transformers.dart';
 
 
-@JS('analyzeSentiment')
-external dynamic analyzeSentiment(String text);
-
 Future<void> runSentimentAnalysis() async {
-  // Wait until the JavaScript wrapper is available
+
   await Future.doWhile(() async {
     await Future.delayed(Duration(milliseconds: 500));
     return context['analyzeSentiment'] == null;
   });
 
   // Call the JS function
-  var result = await promiseToFuture(analyzeSentiment("I hate you!"));
-  print(result); // Expecting [{'label': 'POSITIVE', 'score': 0.999817686}]
+  var result = analyzeSentiment("I hate you!");
+  print(result);
 }
 
 

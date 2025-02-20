@@ -1,7 +1,7 @@
 @JS()
 library transformers_wrapper;
 
-import 'package:js/js.dart';
+import 'dart:js_interop';
 
 @JS('analyzeSentiment')
-external Object analyzeSentiment(String text);
+external JSPromise analyzeSentiment(String text);
