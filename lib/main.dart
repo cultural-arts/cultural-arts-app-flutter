@@ -6,13 +6,11 @@ import 'camera_screen.dart'; // Import the camera screen file
 import 'dart:async';
 import 'transformers.dart';
 
-import 'dart:js';
-
 Future<void> runTransformers() async {
 
   await Future.doWhile(() async {
     await Future.delayed(Duration(milliseconds: 500));
-    return context['analyzeSentiment'] == null;
+    return !isAnalyzeSentimentReady;
   });
 
   // pipeline returns a Promise (JSPromise), we do not call await 

@@ -1,28 +1,15 @@
 import { pipeline } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.3.3';
 
-/**
-globalThis.analyzeSentiment = (async () => {
-    const pipe = await pipeline("sentiment-analysis");
-    console.log("transformers.js pipeline loaded successfully!");
-
-    return async function (text) {
-        console.log("return await pipe(...)");
-        return await pipe(text);
-    };
-})();
- */
-
-
-// globalThis.pipeline = pipeline("sentiment-analysis");
-
-
-
 // Load the model asynchronously and attach to window
 let pipe = null;
+
+globalThis.isAnalyzeSentimentReady = false;
 
 (async function () {
     pipe = await pipeline("sentiment-analysis");
     console.log("transformers.js pipeline loaded successfully!");
+
+    globalThis.isAnalyzeSentimentReady = true;
 
     // Attach function to globalThis so Dart can access it
     globalThis.analyzeSentiment = async function (text) {
