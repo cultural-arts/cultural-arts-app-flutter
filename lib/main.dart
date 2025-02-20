@@ -1,5 +1,4 @@
 import 'dart:js_interop';
-import 'dart:js';
 
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
@@ -7,22 +6,24 @@ import 'camera_screen.dart'; // Import the camera screen file
 import 'dart:async';
 import 'transformers.dart';
 
+import 'dart:js';
 
-Future<void> runSentimentAnalysis() async {
+Future<void> runTransformers() async {
 
   await Future.doWhile(() async {
     await Future.delayed(Duration(milliseconds: 500));
     return context['analyzeSentiment'] == null;
   });
 
-  // Call the JS function
-  var result = analyzeSentiment("I hate you!");
-  print(result);
+  // pipeline returns a Promise (JSPromise), we do not call await 
+  var partial = await analyzeSentiment("How love you?").toDart;
+  print(partial);
 }
 
+Future<void> main() async{
 
-void main() {
-  runSentimentAnalysis();
+  runTransformers();
+
   runApp(const MyApp());
 }
 
