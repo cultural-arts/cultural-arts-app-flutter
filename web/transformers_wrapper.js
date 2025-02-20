@@ -9,8 +9,6 @@ globalThis.isAnalyzeSentimentReady = false;
     pipe = await pipeline("sentiment-analysis");
     console.log("transformers.js pipeline loaded successfully!");
 
-    globalThis.isAnalyzeSentimentReady = true;
-
     // Attach function to globalThis so Dart can access it
     globalThis.analyzeSentiment = async function (text) {
         if (!pipe) {
@@ -19,4 +17,6 @@ globalThis.isAnalyzeSentimentReady = false;
         console.log("return await pipe(...)")
         return await pipe(text);
     };
+
+    globalThis.isAnalyzeSentimentReady = true;
 })();
