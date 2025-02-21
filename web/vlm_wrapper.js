@@ -1,0 +1,116 @@
+import { 
+    AutoProcessor,
+    AutoModelForVision2Seq,
+    load_image,
+} from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.3.3';
+
+console.log("vlm.js");
+
+globalThis.logModel = function (s) {
+    console.log(s);
+};
+
+const DEBUG_MODE = true;
+
+(async function () {
+
+    // https://github.com/huggingface/transformers.js/pull/1059
+
+    const timings = {};
+
+    function logTime(label) {
+        if (DEBUG_MODE){
+            const now = performance.now();
+            if (!timings[label]) {
+                timings[label] = now;
+            } else {
+                console.log(`${label} took ${(now - timings[label]).toFixed(2)}ms`);
+                delete timings[label];
+            }
+        }
+    }
+
+    // Load images
+    logTime("Image Loading");
+    const image1 = await load_image("https://cdn.britannica.com/61/93061-050-99147DCE/Statue-of-Liberty-Island-New-York-Bay.jpg");
+    logTime("Image Loading");
+
+    // Initialize processor and model
+    const model_id = "HuggingFaceTB/SmolVLM-256M-Instruct";
+
+    logTime("Processor Loading");
+    const processor = await AutoProcessor.from_pretrained(model_id);
+    logTime("Processor Loading");
+
+    logTime("Model Loading");
+    const model = await AutoModelForVision2Seq.from_pretrained(model_id, {
+        dtype: {
+            embed_tokens: "fp16", 
+            vision_encoder: "q4", 
+            decoder_model_merged: "q4", 
+        },
+        device: "webgpu",
+    });
+    logTime("Model Loading");
+
+    /**
+        -- CPU WASM --
+        Step,Time (ms)
+        Image Loading,498.10
+        Processor Loading,2281.60
+        Model Loading,13780.50
+        Text Processing,3.40
+        Processor Apply,1083.20
+        Model Generation,59057.00
+        Batch Decoding,0.80
+
+        -- WEBGPU --
+        Step,Time (ms)
+        Image Loading,176.50
+        Processor Loading,991.80
+        Model Loading,13262.60
+        Text Processing,3.10
+        Processor Apply,1016.60
+        Model Generation,6788.70
+        Batch Decoding,0.80
+     */
+
+    // Create input messages
+    const messages = [
+        {
+            role: "user",
+            content: [
+                { type: "image" },
+                { type: "text", text: "Can you describe the two images?" },
+            ],
+        },
+    ];
+
+    // Prepare inputs
+    logTime("Text Processing");
+    const text = processor.apply_chat_template(messages, { add_generation_prompt: true });
+    logTime("Text Processing");
+
+    logTime("Processor Apply");
+    const inputs = await processor(text, [image1], {
+        do_image_splitting: false,
+    });
+    logTime("Processor Apply");
+
+    // Generate outputs
+    logTime("Model Generation");
+    const generated_ids = await model.generate({
+        ...inputs,
+        max_new_tokens: 500,
+    });
+    logTime("Model Generation");
+
+    logTime("Batch Decoding");
+    const generated_texts = processor.batch_decode(
+        generated_ids.slice(null, [inputs.input_ids.dims.at(-1), null]), 
+        { skip_special_tokens: true },
+    );
+    logTime("Batch Decoding");
+
+    console.log(generated_texts[0]);
+})();

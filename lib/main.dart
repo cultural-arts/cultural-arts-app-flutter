@@ -5,6 +5,7 @@ import 'package:geolocator/geolocator.dart';
 import 'camera_screen.dart'; // Import the camera screen file
 import 'dart:async';
 import 'transformers.dart';
+import 'vlm.dart';
 
 Future<void> runTransformers() async {
 
@@ -15,7 +16,7 @@ Future<void> runTransformers() async {
 
   // pipeline returns a Promise (JSPromise)
   // we cast to promise to Future and then call await
-  var partial = await analyzeSentiment("I hate yosaasd").toDart;
+  var partial = await analyzeSentiment("I hate yosa").toDart;
 
   var items = partial.dartify() as List;
   print(items[0]["label"]);
@@ -26,7 +27,9 @@ Future<void> runTransformers() async {
 
 Future<void> main() async{
 
-  runTransformers();
+  logModel("ciao");
+
+  // runTransformers();
 
   runApp(const MyApp());
 }
