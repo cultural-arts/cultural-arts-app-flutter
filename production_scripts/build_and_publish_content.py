@@ -77,6 +77,7 @@ def modify_index_html(local_build):
     content = content.replace('href="favicon.png"', 'href="/webapp/favicon.png"')
     content = content.replace('href="manifest.json"', 'href="/webapp/manifest.json"')
     content = content.replace('src="flutter.js"', 'src="/webapp/flutter.js"')
+    content = content.replace('src="vlm_wrapper.js"', 'src="/webapp/vlm_wrapper.js"')
     
     # Write the modified content back to the file
     with open(index_html_path, 'w') as file:
@@ -98,6 +99,8 @@ def main():
     parser.add_argument('--project_root', required=True, help='Project root')
     parser.add_argument('--password', help='Password for authentication')
     args = parser.parse_args()
+    
+    subprocess.run(["flutter", "build", "web"], shell=True)
 
     if not args.password:
         args.password = get_password()  # Prompt for password if not provided
