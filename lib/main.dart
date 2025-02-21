@@ -4,32 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'camera_screen.dart'; // Import the camera screen file
 import 'dart:async';
-import 'transformers.dart';
 import 'vlm.dart';
-
-Future<void> runTransformers() async {
-
-  await Future.doWhile(() async {
-    await Future.delayed(Duration(milliseconds: 500));
-    return !isAnalyzeSentimentReady;
-  });
-
-  // pipeline returns a Promise (JSPromise)
-  // we cast to promise to Future and then call await
-  var partial = await analyzeSentiment("I hate yosa").toDart;
-
-  var items = partial.dartify() as List;
-  print(items[0]["label"]);
-  print(items[0]["score"]);
-
-}
 
 
 Future<void> main() async{
 
-  logModel("ciao");
+  var generatedText = await whatsInTheImage("https://cdn.britannica.com/61/93061-050-99147DCE/Statue-of-Liberty-Island-New-York-Bay.jpg").toDart;
 
-  // runTransformers();
+  print(generatedText);
 
   runApp(const MyApp());
 }

@@ -4,4 +4,4 @@ library vlm_wrapper;
 import 'dart:js_interop';
 
 @JS()
-external void logModel(String s);
+external JSPromise<JSString> whatsInTheImage(String imagePath);

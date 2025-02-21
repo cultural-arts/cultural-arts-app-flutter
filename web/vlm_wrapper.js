@@ -6,13 +6,10 @@ import {
 
 console.log("vlm.js");
 
-globalThis.logModel = function (s) {
-    console.log(s);
-};
-
 const DEBUG_MODE = true;
 
-(async function () {
+globalThis.whatsInTheImage = async function (imagePath) {
+    console.log(imagePath);
 
     // https://github.com/huggingface/transformers.js/pull/1059
 
@@ -32,7 +29,7 @@ const DEBUG_MODE = true;
 
     // Load images
     logTime("Image Loading");
-    const image1 = await load_image("https://cdn.britannica.com/61/93061-050-99147DCE/Statue-of-Liberty-Island-New-York-Bay.jpg");
+    const image1 = await load_image(imagePath);
     logTime("Image Loading");
 
     // Initialize processor and model
@@ -112,5 +109,14 @@ const DEBUG_MODE = true;
     );
     logTime("Batch Decoding");
 
-    console.log(generated_texts[0]);
-})();
+    /**
+     * The image is a photograph of the statue of the Lady in the Park in New York City.
+     * The statue is located in the center of the image and is surrounded by the sky.
+     * The statue is green and has a statue of the Lady in the center.
+     * The statue is made of granite and is surrounded by a blue and white backdrop.
+     * The statue is surrounded by trees and there is a blue and white backdrop.
+     */
+
+    return generated_texts[0];
+
+};
