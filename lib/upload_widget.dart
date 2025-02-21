@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:js_interop';
-import 'dart:js_interop_unsafe';
 
 import 'package:camera/camera.dart';
 import 'package:cultural_arts/api/art_suggestion_api.dart';
@@ -11,11 +10,8 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 
-import 'api/log_api.dart';
 import 'utils/geo_utilities.dart';
-import 'dart:ui';
-
-String transformer = 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2';
+import 'vlm.dart';
 
 class UploadPhoto extends StatefulWidget {
   const UploadPhoto({super.key, required this.acquiredImage});
@@ -35,9 +31,6 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
   int uploadAttempts = 3;
   String? base64Image; // the base64 image version
   Map<String, String> exifData = {}; // the exif data container
-
-  // the goal here is to setup a solution with transformer.js
-  // https://github.com/dart-lang/sdk/issues/55465#issuecomment-2059917248
 
   @override
   void initState() {
@@ -133,11 +126,9 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
 
     final formattedExifData = formatMapToString(exifData);
 
-    var artSuggestionsAPI =
-        ArtSuggestionsAPI(baseUrl: CommunicationDriver.baseURL);
+    var artSuggestionsAPI = ArtSuggestionsAPI(baseUrl: CommunicationDriver.baseURL);
 
-    final response = await artSuggestionsAPI.searchPerfectMatch(
-        base64Image!, formattedExifData);
+    final response = await artSuggestionsAPI.searchPerfectMatch(base64Image!, formattedExifData);
 
     switch (response.statusCode) {
       case 200:
@@ -159,11 +150,10 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
       case CommunicationDriver.http229CulturalArtsFoundSecondStrikeSuggestions:
         break;
       case CommunicationDriver.http231CulturalArtsNoResultsFound:
-        
-        // try to call here transformer.js
-
-        
-
+        // to see if load image from tf is able to load it
+        // "https://cdn.britannica.com/61/93061-050-99147DCE/Statue-of-Liberty-Island-New-York-Bay.jpg"
+        var generatedText = await whatsInTheImage(acquiredImage.path).toDart as String;
+        myDialogBuilder(context, "AI Assistant", generatedText, Icons.assistant);
         break;
       case CommunicationDriver.http452CulturalArtsInvalidImg:
         break;

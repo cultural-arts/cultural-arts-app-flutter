@@ -1,18 +1,10 @@
-import 'dart:js_interop';
-
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'camera_screen.dart'; // Import the camera screen file
 import 'dart:async';
-import 'vlm.dart';
 
 
-Future<void> main() async{
-
-  var generatedText = await whatsInTheImage("https://cdn.britannica.com/61/93061-050-99147DCE/Statue-of-Liberty-Island-New-York-Bay.jpg").toDart;
-
-  print(generatedText);
-
+void main(){
   runApp(const MyApp());
 }
 
