@@ -150,7 +150,6 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
       case CommunicationDriver.http229CulturalArtsFoundSecondStrikeSuggestions:
         break;
       case CommunicationDriver.http231CulturalArtsNoResultsFound:
-        // to see if load image from tf is able to load it
         // "https://cdn.britannica.com/61/93061-050-99147DCE/Statue-of-Liberty-Island-New-York-Bay.jpg"
         var generatedText = await whatsInTheImage(acquiredImage.path).toDart as String;
         myDialogBuilder(context, "AI Assistant", generatedText, Icons.assistant);

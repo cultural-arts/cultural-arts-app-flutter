@@ -11,6 +11,37 @@ const DEBUG_MODE = true;
 globalThis.whatsInTheImage = async function (imagePath) {
     console.log(imagePath);
 
+    const adapter = await navigator.gpu.requestAdapter();
+
+    /** [Android Available Features (via navigator.gpu)]
+        float32-blendable
+        depth32float-stencil8
+        rg11b10ufloat-renderable
+        texture-compression-astc
+        texture-compression-etc2
+        depth-clip-control
+        chromium-experimental-multi-draw-indirect
+        dual-source-blending
+        clip-distances
+        timestamp-query
+        chromium-experimental-snorm16-texture-formats
+        chromium-experimental-unorm16-texture-formats
+        chromium-experimental-timestamp-query-inside-passes
+        indirect-first-instance
+     */
+
+    if (DEBUG_MODE){
+        console.log("******");
+        adapter.features.forEach(element => {
+            console.log(element);
+        });
+        console.log("******");
+    }
+
+    if (!adapter.features.has("shader-f16")) {
+        console.log("16-bit floating-point value support is not available");
+    }
+
     // https://github.com/huggingface/transformers.js/pull/1059
 
     const timings = {};
@@ -42,7 +73,7 @@ globalThis.whatsInTheImage = async function (imagePath) {
     logTime("Model Loading");
     const model = await AutoModelForVision2Seq.from_pretrained(model_id, {
         dtype: {
-            embed_tokens: "fp16", 
+            embed_tokens: "fp32", 
             vision_encoder: "q4", 
             decoder_model_merged: "q4", 
         },
@@ -78,7 +109,7 @@ globalThis.whatsInTheImage = async function (imagePath) {
             role: "user",
             content: [
                 { type: "image" },
-                { type: "text", text: "Can you describe the two images?" },
+                { type: "text", text: "Can you describe this artistic image?" },
             ],
         },
     ];

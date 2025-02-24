@@ -100,6 +100,8 @@ def main():
     parser.add_argument('--password', help='Password for authentication')
     args = parser.parse_args()
     
+    # --debug seems to not provide additional info for the webgpu error
+    # --wasm is not available since geolocator package (^10.*) uses dart:html, could make sanse do upgrade all packages
     subprocess.run(["flutter", "build", "web"], shell=True)
 
     if not args.password:
