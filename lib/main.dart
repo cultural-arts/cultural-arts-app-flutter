@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'camera_screen.dart'; // Import the camera screen file
 import 'dart:async';
+import 'onnx_vlm.dart';
+import 'dart:js_interop';
 
+Future<void> main() async {
 
-void main(){
+  var res = await runSmolVLM().toDart as String;
+
   runApp(const MyApp());
 }
 
