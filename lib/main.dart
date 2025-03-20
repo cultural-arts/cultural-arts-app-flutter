@@ -4,11 +4,11 @@ import 'camera_screen.dart'; // Import the camera screen file
 import 'dart:async';
 import 'onnx_vlm.dart';
 import 'dart:js_interop';
+import 'package:logging/logging.dart';
 
-Future<void> main() async {
+// final log = Logger('Main');
 
-  // var res = await runSmolVLM().toDart as String;
-
+void main() {
   runApp(const MyApp());
 }
 
@@ -41,8 +41,8 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   // Initialize a variable to track whether location data has been loaded
-  late LocationPermission locationDataState =
-      LocationPermission.unableToDetermine;
+  late Future<bool> vlmLoadingFuture;
+  late LocationPermission locationDataState = LocationPermission.unableToDetermine;
 
   void updateLocationDataState() {
     initPosition().then((value) {
@@ -56,6 +56,7 @@ class _MyAppState extends State<MyApp> {
   void initState() {
     super.initState();
     // Call initPosition() asynchronously and wait for it to complete
+    vlmLoadingFuture = loadSmolVLM().toDart as Future<bool>;
     updateLocationDataState();
   }
 
@@ -64,11 +65,32 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp(
       title: 'cultural-arts.com app',
       theme: ThemeData(
-        colorScheme:
-            ColorScheme.fromSeed(seedColor: Color.fromRGBO(41, 182, 246, 1)),
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color.fromRGBO(41, 182, 246, 1)),
         useMaterial3: true,
       ),
-      home: _buildHomeWidget(locationDataState, updateLocationDataState),
+      home: FutureBuilder<bool>(
+        future: vlmLoadingFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const LoadingScreen(); // Show spinner while VLM loads
+          } else if (snapshot.hasError || snapshot.data == false) {
+            return const ErrorScreen(); // Show error if loading fails
+          }
+          // Once VLM is loaded, check location permissions
+          return _buildHomeWidget(locationDataState, updateLocationDataState);
+        },
+      ),
+    );
+  }
+}
+
+class ErrorScreen extends StatelessWidget {
+  const ErrorScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: Center(child: Text("Failed to load SmolVLM. Please try again.")),
     );
   }
 }
@@ -128,17 +150,31 @@ class LocationPermissionWidget extends StatelessWidget {
 }
 
 class LoadingScreen extends StatelessWidget {
-  const LoadingScreen({super.key});
+  final String message;
+
+  const LoadingScreen({super.key, this.message = "Loading AI Models, please wait..."});
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
+    return Scaffold(
       body: Center(
-        child: CircularProgressIndicator(), // Show a loading indicator
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 20),
+            Text(
+              message,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }
 }
+
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.title});
