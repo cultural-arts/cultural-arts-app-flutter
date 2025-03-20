@@ -13,7 +13,7 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 # Load images
 # image = load_image("https://cdn.britannica.com/61/93061-050-99147DCE/Statue-of-Liberty-Island-New-York-Bay.jpg")
-image = load_image(r"C:\Users\s.brazzo\Desktop\workspace\ca\fd95a7e2-eff9-45f8-a2bc-66c78bb3b200.jpg")
+image = load_image(r"C:\Users\s.brazzo\Desktop\workspace\ca\cultural-arts-app-flutter\web\Statue-of-Liberty-Island-New-York-Bay.jpg")
 
 # Initialize processor and model
 processor = AutoProcessor.from_pretrained("HuggingFaceTB/SmolVLM-256M-Instruct")
