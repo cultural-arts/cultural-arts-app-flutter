@@ -52,9 +52,9 @@ class SmolVLMInference {
       }
     }
 
-    async officialPreproc(imageUrl, question){
+    async officialPreproc(imageURL, question){
 
-      const image1 = await load_image(imageUrl);
+      const image1 = await load_image(imageURL);
 
       // Load processor and model
       const model_id = "HuggingFaceTB/SmolVLM-256M-Instruct";
@@ -76,10 +76,10 @@ class SmolVLMInference {
     }
   
     // Main inference function
-    async generateText(imageUrl, question, maxNewTokens = 1024) {
+    async generateText(imageURL, question, maxNewTokens = 1024) {
       try {
 
-        const officialInputProcessing = await this.officialPreproc(imageUrl, question);
+        const officialInputProcessing = await this.officialPreproc(imageURL, question);
         
         // Prepare decoder inputs
         const batchSize = 1;
@@ -212,6 +212,7 @@ class SmolVLMInference {
           
           // Optional streaming output
           if (i % 5 === 0) {
+            // TODO here call the callback to update the UI
             console.log("Generation progress:", outputText);
           }
           
@@ -283,7 +284,7 @@ class SmolVLMInference {
   }
   
   // Usage example
-globalThis.runSmolVLM = async function () {
+globalThis.runSmolVLM = async function (imageURL) {
 
     let model_id = "HuggingFaceTB/SmolVLM-256M-Instruct";
     const config = await AutoConfig.from_pretrained(model_id);
@@ -297,13 +298,12 @@ globalThis.runSmolVLM = async function () {
     }
     
     // Step 2: Run inference
-    const imageUrl = "./Statue-of-Liberty-Island-New-York-Bay.jpg";
     const question = "Can you describe this image?";
     
-    console.log("Running inference on image:", imageUrl);
+    console.log("Running inference on image:", imageURL);
     console.log("Question:", question);
     
-    const result = await inferenceEngine.generateText(imageUrl, question);
+    const result = await inferenceEngine.generateText(imageURL, question);
     
     // Step 3: Show results
     console.log("Generated text:");

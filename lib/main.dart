@@ -7,7 +7,7 @@ import 'dart:js_interop';
 
 Future<void> main() async {
 
-  var res = await runSmolVLM().toDart as String;
+  // var res = await runSmolVLM().toDart as String;
 
   runApp(const MyApp());
 }

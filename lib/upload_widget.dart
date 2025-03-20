@@ -11,7 +11,7 @@ import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 
 import 'utils/geo_utilities.dart';
-import 'vlm.dart';
+import 'onnx_vlm.dart';
 
 class UploadPhoto extends StatefulWidget {
   const UploadPhoto({super.key, required this.acquiredImage});
@@ -151,7 +151,7 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
         break;
       case CommunicationDriver.http231CulturalArtsNoResultsFound:
         // "https://cdn.britannica.com/61/93061-050-99147DCE/Statue-of-Liberty-Island-New-York-Bay.jpg"
-        var generatedText = await whatsInTheImage(acquiredImage.path).toDart as String;
+        var generatedText = await runSmolVLM(acquiredImage.path).toDart as String;
         myDialogBuilder(context, "AI Assistant", generatedText, Icons.assistant);
         break;
       case CommunicationDriver.http452CulturalArtsInvalidImg:
