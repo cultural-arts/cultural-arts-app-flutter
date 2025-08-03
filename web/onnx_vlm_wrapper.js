@@ -106,7 +106,8 @@ class NanoVLMInference {
       
       // Calculate position IDs
       // let positionIds = this.calculatePositionIds(attentionMask);
-      let positionIds = new ort.Tensor("int64", new BigInt64Array([BigInt(0)]), [1]);
+      let positionIdCounter = 0;
+      let positionId = new ort.Tensor("int64", new BigInt64Array([BigInt(positionIdCounter)]), [1]);
       
       // Generation loop
       let generatedTokens = [];
@@ -159,11 +160,13 @@ class NanoVLMInference {
 
       const decoderFeeds = {
         "decoder_input": concatText.x_y_concat,
-        "decoder_start_pos": positionIds,
+        "decoder_start_pos": positionId,
         ...pastKeyValues
       };
 
       let prefillOutput = await this.decoder.run(decoderFeeds);
+
+      this.updatePastKV(prefillOutput, pastKeyValues);
 
       console.log("[5/X] decoder done.");
 
@@ -180,107 +183,56 @@ class NanoVLMInference {
       let currentLogits = await this.decoderHead.run(decoderHeadFeeds);
 
       console.log("[7/X] decoder head done.");
+
+      positionIdCounter = imgProjection.modality_projection_output.dims[1] + promptEmbeds.embedding.dims[1];
+      positionId = new ort.Tensor("int64", new BigInt64Array([BigInt(positionIdCounter)]), [1]);
       
       console.log("decode...");
+
+      let generatedTokenIds = [];
       
       for (let i = 0; i < maxNewTokens; i++) {
 
-        // Get token embeddings (from LLM)
-        const tokenIdsArray = Array.from(this.getTensorData(tokenIds));
-        const embedFeed = { 'input_ids': tokenIds };
-        const embedResult = await this.tokenEmbeddingSession.run(embedFeed);
+        /*
+        filtered_logits = top_k_top_p_filtering(current_logits, top_k=top_k, top_p=top_p)
+        probs = torch.softmax(filtered_logits / temperature, dim=-1)
+        next_token_id = torch.multinomial(probs, num_samples=1)
+         */
 
-        // [, , ]
-        let inputsEmbeds = embedResult.inputs_embeds;
-        
-        // Process image if needed
-        if (imageFeatures === null) {
+        throw "Implement rows above to get nextToken";
 
-          const imageTokenCount = tokenIdsArray.filter(num => num === BigInt(this.imageTokenId)).length;
+        generatedTokenIds.push(nextToken);
 
-          const visionFeed = {
-            'pixel_values': officialInputProcessing.pixel_values,
-            'pixel_attention_mask': officialInputProcessing.pixel_attention_mask
-          };
-          
-          const visionResult = await this.visionSession.run(visionFeed);
+        const tokenEmbedFeeds = {
+          "tokens": officialInputProcessing.nextToken
+        };
 
-          // imageFeatures.shape = [13, 64, 576]
-          const firstDim = visionResult.image_features.dims[0] * visionResult.image_features.dims[1];
-          const secDim = visionResult.image_features.dims[2];
-          // [13, 64, 576] -> [479232] contiguous
-          imageFeatures = Array.from(this.getTensorData(visionResult.image_features));
-          // [13, 64, 576] -> [832, 576]
-          imageFeatures = math.reshape(imageFeatures, [firstDim, secDim]);
-
-          // there must be image_token * firstDim tokens in inputsEmbeds, then replace each position (second dim) with the index from imageFeatures
-
-          if (imageTokenCount != firstDim) {
-            return "Error, invalid number of image tokens";
-          }
-
-          const origDims = inputsEmbeds.dims; // [1, 876, 576]
-          const origLocation = inputsEmbeds.location; // cpu
-          const origType = inputsEmbeds.type; // float32
-          const origSize = inputsEmbeds.size; // 504576
-
-          // [504576] contiguous
-          let inputsEmbedsArray = Array.from(this.getTensorData(inputsEmbeds)); 
-          // [504576] -> [876, 576]
-          inputsEmbedsArray = math.reshape(inputsEmbedsArray, [inputsEmbeds.dims[1], inputsEmbeds.dims[2]]); // first dimension [1] is not effective here
-
-          // replace with imageFeatures
-          let imgFeaturesCnt = 0;
-          for (let i = 0; i < tokenIdsArray.length; i++){
-            if (tokenIdsArray[i] == BigInt(this.imageTokenId)) {
-              inputsEmbedsArray[i] = imageFeatures[imgFeaturesCnt];
-              imgFeaturesCnt += 1;
-            }
-          }
-
-          // [876, 576] -> [504576]
-          inputsEmbedsArray = math.reshape(inputsEmbedsArray, [inputsEmbeds.size]);
-
-          // convert the array back to tensor (cpu)
-          inputsEmbeds = new ort.Tensor("float32", new Float32Array(inputsEmbedsArray), [inputsEmbeds.size]);
-          inputsEmbeds = inputsEmbeds.reshape(origDims);
-
-          if (origDims !== inputsEmbeds.dims || origLocation !== inputsEmbeds.location || origType !== inputsEmbeds.type || origSize !== inputsEmbeds.size) {
-            return "Error, convertion of inputsEmbed failed";
-          }
-
-        }
+        let nextTokenEmbed = await this.tokenEmbedding.run(tokenEmbedFeeds);
         
         // Run decoder model
         const decoderFeeds = {
-          'inputs_embeds': inputsEmbeds,
-          // 'attention_mask': attentionMask,
-          'position_ids': positionIds,
-          ...pastKeyValues  // [1, 3, 0 ,64]
+          'decoder_input': nextTokenEmbed,
+          'decoder_start_pos': positionId,
+          ...pastKeyValues
         };
         
-        const decoderResults = await this.decoderSession.run(decoderFeeds);
-        
-        // [1, 876, 49280]
-        const logits = decoderResults.logits; 
+        const decoderResults = await this.decoder.run(decoderFeeds);
 
-        // we take the entire object, remove the logits with effect on [decoderResults]
-        const presentKeyValues = decoderResults;
-        delete presentKeyValues.logits;
-        
-        // Get next token (argmax of last logits)
-        const nextToken = this.getNextToken(logits);
-        
-        // Update for next iteration
-        tokenIds = new ort.Tensor('int64', new BigInt64Array([BigInt(nextToken)]), [1, 1]);
-        // attentionMask = new ort.Tensor('int64', new BigInt64Array([1n]), [1, 1]);
-        positionIds = new ort.Tensor('int64', new BigInt64Array([BigInt(this.getTensorData(positionIds).at(-1) + BigInt(1))]), [1, 1]);
-        
         // Update past key values
-        this.updatePastKV(presentKeyValues, pastKeyValues);
+        this.updatePastKV(decoderResults, pastKeyValues);
         
-        // Add token to generated sequence
-        generatedTokens.push(nextToken);
+        const lastTokenFeeds = { "x": decoderResults.decoder_output };
+      
+        // x -> last_token
+        let lastToken = await this.lastToken.run(lastTokenFeeds);
+
+        const decoderHeadFeeds = { "embedding": lastToken.last_token.reshape([1, 1, this.lmDim]) };
+
+        // embedding -> tokens
+        let currentLogits = await this.decoderHead.run(decoderHeadFeeds);
+
+        // Update for next iteration
+        positionId = new ort.Tensor('int64', new BigInt64Array([BigInt(this.getTensorData(positionId).at(-1) + BigInt(1))]), [1, 1]);
         
         // Decode token and add to output text
         const tokenText = this.processor.decode([nextToken]);
@@ -293,9 +245,9 @@ class NanoVLMInference {
         }
         
         // Check for EOS token
-        if (nextToken === this.eosTokenId) {
-          break;
-        }
+        // if (nextToken === this.eosTokenId) {
+        //   break;
+        // }
       }
       
       console.log("Generation complete!");
@@ -311,27 +263,9 @@ class NanoVLMInference {
 
     for (let layer = 0; layer < this.numHiddenLayers; layer++) {
       for (let kv of ['key', 'value']) {
-        pastKV[`past_key_values.${layer}.${kv}`] = presentKV[`present.${layer}.${kv}`];
+        pastKV[`past_${kv}_${layer}`] = presentKV[`present_${kv}_${layer}`];
       }
     }
-  }
-
-  // Helper to calculate position IDs from attention mask
-  calculatePositionIds(attentionMask) {
-    const attentionArray = this.getTensorData(attentionMask);
-    const positionArray = new BigInt64Array(attentionArray.length);
-    6
-    let position = 0n;
-    for (let i = 0; i < attentionArray.length; i++) {
-      if (attentionArray[i] === 1n) {
-        positionArray[i] = BigInt(position);
-        position++;
-      } else {
-        positionArray[i] = 0n;
-      }
-    }
-    
-    return new ort.Tensor('int64', positionArray, attentionMask.dims);
   }
 
   // Helper to get next token from logits
