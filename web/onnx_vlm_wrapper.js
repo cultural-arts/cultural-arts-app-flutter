@@ -30,6 +30,8 @@ class NanoVLMInference {
     this.lmDim = this.config.lm_config.lm_dim;
     this.vitDim = this.config.vit_config.vit_dim;
     this.numHiddenLayers = this.config.lm_config.num_hidden_layers;
+    this.numKeyValueHeads = 1;
+    this.headDim = 36;
   }
 
   // Initialize ONNX sessions
