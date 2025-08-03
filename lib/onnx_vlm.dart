@@ -4,7 +4,7 @@ library onnx_vlm_wrapper;
 import 'dart:js_interop';
 
 @JS()
-external JSPromise<JSString> runSmolVLM(String imageURL);
+external JSPromise<JSString> runNanoVLM(String imageURL);
 
 @JS()
-external JSPromise<JSBoolean> loadSmolVLM();
+external JSPromise<JSBoolean> loadNanoVLM();

@@ -56,7 +56,7 @@ class _MyAppState extends State<MyApp> {
   void initState() {
     super.initState();
     // Call initPosition() asynchronously and wait for it to complete
-    vlmLoadingFuture = loadSmolVLM().toDart as Future<bool>;
+    vlmLoadingFuture = loadNanoVLM().toDart as Future<bool>;
     updateLocationDataState();
   }
 

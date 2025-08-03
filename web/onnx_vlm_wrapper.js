@@ -1,35 +1,35 @@
 import { 
-  AutoProcessor,
+  AutoTokenizer,
   load_image,
   AutoConfig
-} from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.3.3';
+} from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.1';
 
-class SmolVLMInference {
+// source to check for updates https://www.jsdelivr.com/package/npm/@huggingface/transformers
+
+class NanoVLMInference {
   constructor(config) {
     // Model configuration
-    this.modelId = "HuggingFaceTB/SmolVLM-256M-Instruct";
     this.config = {
-      text_config: {
-        num_key_value_heads: config.text_config.num_key_value_heads,
-        head_dim: config.text_config.head_dim,
-        num_hidden_layers: config.text_config.num_hidden_layers,
-        eos_token_id: config.text_config.eos_token_id
+      lm_config: {
+        lm_dim: config.lm_config.lm_dim,
+        num_hidden_layers: config.lm_config.num_hidden_layers,
       },
-      image_token_id: config.image_token_id
+      vit_config: {
+        vit_dim: config.vit_config.vit_dim,
+      }
     };
     
     // Initialize sessions and processor
-    this.visionSession = null;
-    this.embedSession = null;
-    this.decoderSession = null;
-    this.processor = null;
+    this.visionTower = null;
+    this.mp = null;
+    this.tokenEmbedding = null;
+    this.decoderHead = null;
+    this.decoder = null;
     
     // Model parameters from config
-    this.numKeyValueHeads = this.config.text_config.num_key_value_heads;
-    this.headDim = this.config.text_config.head_dim;
-    this.numHiddenLayers = this.config.text_config.num_hidden_layers;
-    this.eosTokenId = this.config.text_config.eos_token_id;
-    this.imageTokenId = this.config.image_token_id;
+    this.lmDim = this.config.lm_config.lm_dim;
+    this.vitDim = this.config.vit_config.vit_dim;
+    this.numHiddenLayers = this.config.lm_config.num_hidden_layers;
   }
 
   // Initialize ONNX sessions
@@ -38,10 +38,12 @@ class SmolVLMInference {
       console.log("Loading ONNX models...");
       
       // Load all three models in parallel
-      [this.visionSession, this.embedSession, this.decoderSession] = await Promise.all([
-        ort.InferenceSession.create('./vision_encoder_q4.onnx', { executionProviders: ['webgpu'] }),
-        ort.InferenceSession.create('./embed_tokens_q4.onnx', { executionProviders: ['webgpu'] }),
-        ort.InferenceSession.create('./decoder_model_merged_q4.onnx', { executionProviders: ['webgpu'] })
+      [this.visionTower, this.mp, this.tokenEmbedding, this.decoderHead, this.decoder] = await Promise.all([
+        ort.InferenceSession.create('./nanoVLM_vision_tower.onnx', { executionProviders: ['webgpu'] }),
+        ort.InferenceSession.create('./nanoVLM_mp.onnx', { executionProviders: ['webgpu'] }),
+        ort.InferenceSession.create('./nanoVLM_decoder_token_embedding.onnx', { executionProviders: ['webgpu'] }),
+        ort.InferenceSession.create('./nanoVLM_decoder_head.onnx', { executionProviders: ['webgpu'] }),
+        ort.InferenceSession.create('./nanoVLM_decoder.onnx', { executionProviders: ['webgpu'] })
       ]);
       
       console.log("Models loaded successfully!");
@@ -54,34 +56,22 @@ class SmolVLMInference {
 
   async officialPreproc(imageURL, question){
 
-    const image1 = await load_image(imageURL);
+    let inputs = {};
+    const tokenizer = await AutoTokenizer.from_pretrained('HuggingFaceTB/cosmo2-tokenizer');
 
-    // Load processor and model
-    const model_id = "HuggingFaceTB/SmolVLM-256M-Instruct";
-    this.processor = await AutoProcessor.from_pretrained(model_id);
-
-    const messages = [
-        {
-            role: "user",
-            content: [
-                { type: "image" },
-                { type: "text", text: question },
-            ],
-        },
-    ];
-    const prompt = this.processor.apply_chat_template(messages, { tokenize: false, add_generation_prompt: true });
-    const inputs = await this.processor(prompt, [image1]);
+    inputs["img"] = await load_image(imageURL);
+    inputs["token_ids"] = await tokenizer(question);
 
     return inputs;
   }
 
   // Main inference function
-  async generateText(imageURL, question, maxNewTokens = 1024) {
+  async generateText(imageURL, question, maxNewTokens = 50) {
     try {
 
       const officialInputProcessing = await this.officialPreproc(imageURL, question);
       
-      // Prepare decoder inputs
+      // prepare decoder inputs for prefill phase
       const batchSize = 1;
       let pastKeyValues = {};
       for (let layer = 0; layer < this.numHiddenLayers; layer++) {
@@ -95,32 +85,52 @@ class SmolVLMInference {
       }
       
       let imageFeatures = null;
-      let inputIds = officialInputProcessing.input_ids;
-      let attentionMask = officialInputProcessing.attention_mask;
+      let tokenIds = officialInputProcessing.token_ids;
+      // let attentionMask = officialInputProcessing.attention_mask;
       
       // Calculate position IDs
-      let positionIds = this.calculatePositionIds(attentionMask);
+      // let positionIds = this.calculatePositionIds(attentionMask);
+      let positionIds = ort.Tensor("int64", new BigInt64Array([BigInt(0)]), [1]);
       
       // Generation loop
       let generatedTokens = [];
       let outputText = "";
+
+      console.log("PREFILL...");
+
+      // [1, , ]
+      let imgEmbed = self.visionTower.run(officialInputProcessing.img);
       
-      console.log("Starting generation...");
+      // [1, , ]
+      let imgProjection = self.mp.run(imgEmbed); 
+
+      // concat imgProjection and tokenIds over dim 1
+      // let # [B, T_img + T_prompt_text, D_lm]
+
+      const decoderFeeds = {
+        "decoder_input": null,
+        "decoder_start_pos": positionIds,
+        ...pastKeyValues
+      };
+
+      let prefillOutput = self.decoderSession.run(decoderFeeds);
+      
+      console.log("DECODING...");
       
       for (let i = 0; i < maxNewTokens; i++) {
 
-        // Get token embeddings
-        const inputIdsArray = Array.from(this.getTensorData(inputIds));
-        const embedFeed = { 'input_ids': inputIds };
-        const embedResult = await this.embedSession.run(embedFeed);
+        // Get token embeddings (from LLM)
+        const tokenIdsArray = Array.from(this.getTensorData(tokenIds));
+        const embedFeed = { 'input_ids': tokenIds };
+        const embedResult = await this.tokenEmbeddingSession.run(embedFeed);
 
-        // [1, 876, 576]
+        // [, , ]
         let inputsEmbeds = embedResult.inputs_embeds;
         
         // Process image if needed
         if (imageFeatures === null) {
 
-          const imageTokenCount = inputIdsArray.filter(num => num === BigInt(this.imageTokenId)).length;
+          const imageTokenCount = tokenIdsArray.filter(num => num === BigInt(this.imageTokenId)).length;
 
           const visionFeed = {
             'pixel_values': officialInputProcessing.pixel_values,
@@ -155,8 +165,8 @@ class SmolVLMInference {
 
           // replace with imageFeatures
           let imgFeaturesCnt = 0;
-          for (let i = 0; i < inputIdsArray.length; i++){
-            if (inputIdsArray[i] == BigInt(this.imageTokenId)) {
+          for (let i = 0; i < tokenIdsArray.length; i++){
+            if (tokenIdsArray[i] == BigInt(this.imageTokenId)) {
               inputsEmbedsArray[i] = imageFeatures[imgFeaturesCnt];
               imgFeaturesCnt += 1;
             }
@@ -178,7 +188,7 @@ class SmolVLMInference {
         // Run decoder model
         const decoderFeeds = {
           'inputs_embeds': inputsEmbeds,
-          'attention_mask': attentionMask,
+          // 'attention_mask': attentionMask,
           'position_ids': positionIds,
           ...pastKeyValues  // [1, 3, 0 ,64]
         };
@@ -196,8 +206,8 @@ class SmolVLMInference {
         const nextToken = this.getNextToken(logits);
         
         // Update for next iteration
-        inputIds = new ort.Tensor('int64', new BigInt64Array([BigInt(nextToken)]), [1, 1]);
-        attentionMask = new ort.Tensor('int64', new BigInt64Array([1n]), [1, 1]);
+        tokenIds = new ort.Tensor('int64', new BigInt64Array([BigInt(nextToken)]), [1, 1]);
+        // attentionMask = new ort.Tensor('int64', new BigInt64Array([1n]), [1, 1]);
         positionIds = new ort.Tensor('int64', new BigInt64Array([BigInt(this.getTensorData(positionIds).at(-1) + BigInt(1))]), [1, 1]);
         
         // Update past key values
@@ -244,7 +254,7 @@ class SmolVLMInference {
   calculatePositionIds(attentionMask) {
     const attentionArray = this.getTensorData(attentionMask);
     const positionArray = new BigInt64Array(attentionArray.length);
-    
+    6
     let position = 0n;
     for (let i = 0; i < attentionArray.length; i++) {
       if (attentionArray[i] === 1n) {
@@ -282,14 +292,22 @@ class SmolVLMInference {
     return tensor.data;
   }
 }
-  
-console.log("Loading HuggingFaceTB/SmolVLM-256M-Instruct configs...");
-let model_id = "HuggingFaceTB/SmolVLM-256M-Instruct";
-const config = await AutoConfig.from_pretrained(model_id);
-console.log("Init SmolVLMInference object...");
-const inferenceEngine = new SmolVLMInference(config);
 
-globalThis.loadSmolVLM = async function () {
+const config = {
+  lm_config: {
+    lm_dim: 216,
+    num_hidden_layers: 1,
+  },
+  vit_config: {
+    vit_dim: 768
+  }
+}
+
+
+console.log("Loading NanoVLM model configs...");
+const inferenceEngine = new NanoVLMInference(config);
+
+globalThis.loadNanoVLM = async function () {
   // Step 1: Load models
   const modelsLoaded = await inferenceEngine.loadModels();
   if (!modelsLoaded) {
@@ -301,11 +319,11 @@ globalThis.loadSmolVLM = async function () {
 }
 
   // Usage example
-globalThis.runSmolVLM = async function (imageURL) {
+globalThis.runNanoVLM = async function (imageURL) {
   
   // Step 2: Run inference
-  const question = "Can you describe this image?";
-  
+  const question = "Question: What art is there in the photo? Answer:";
+
   console.log("Running inference on image:", imageURL);
   console.log("Question:", question);
   
