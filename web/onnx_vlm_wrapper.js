@@ -25,6 +25,8 @@ class NanoVLMInference {
     this.tokenEmbedding = null;
     this.decoderHead = null;
     this.decoder = null;
+    this.concat = null;
+    this.lastToken = null;
     
     // Model parameters from config
     this.lmDim = this.config.lm_config.lm_dim;
@@ -40,12 +42,14 @@ class NanoVLMInference {
       console.log("Loading ONNX models...");
       
       // Load all three models in parallel
-      [this.visionTower, this.mp, this.tokenEmbedding, this.decoderHead, this.decoder] = await Promise.all([
+      [this.visionTower, this.mp, this.tokenEmbedding, this.decoderHead, this.decoder, this.concat, this.lastToken] = await Promise.all([
         ort.InferenceSession.create('./nanoVLM_vision_tower.onnx', { executionProviders: ['webgpu'] }),
         ort.InferenceSession.create('./nanoVLM_mp.onnx', { executionProviders: ['webgpu'] }),
         ort.InferenceSession.create('./nanoVLM_decoder_token_embedding.onnx', { executionProviders: ['webgpu'] }),
         ort.InferenceSession.create('./nanoVLM_decoder_head.onnx', { executionProviders: ['webgpu'] }),
-        ort.InferenceSession.create('./nanoVLM_decoder.onnx', { executionProviders: ['webgpu'] })
+        ort.InferenceSession.create('./nanoVLM_decoder.onnx', { executionProviders: ['webgpu'] }),
+        ort.InferenceSession.create('./nanoVLM_dynamicconcat.onnx', { executionProviders: ['webgpu'] }),
+        ort.InferenceSession.create('./nanoVLM_last_token.onnx', { executionProviders: ['webgpu'] })
       ]);
       
       console.log("Models loaded successfully!");
@@ -88,7 +92,7 @@ class NanoVLMInference {
       let pastKeyValues = {};
       for (let layer = 0; layer < this.numHiddenLayers; layer++) {
         for (let kv of ['key', 'value']) {
-          pastKeyValues[`past_key_values.${layer}.${kv}`] = new ort.Tensor(
+          pastKeyValues[`past_${kv}_${layer}`] = new ort.Tensor(
             'float32', 
             new Float32Array(0), 
             [batchSize, this.numKeyValueHeads, 0, this.headDim]
@@ -108,7 +112,7 @@ class NanoVLMInference {
       let generatedTokens = [];
       let outputText = "";
 
-      console.log("Prefill phase.");
+      console.log("prefill...");
 
       const visionTowerFeeds = {
         "vision_tower_input": officialInputProcessing.img,
@@ -135,6 +139,8 @@ class NanoVLMInference {
       // [1, 12] -> [1, 12, 216] embedding
       let promptEmbeds = await this.tokenEmbedding.run(tokenEmbedFeeds);
 
+      console.log("[3/X] token embedding done.");
+
       if (imgProjection.modality_projection_output.dims[2] != promptEmbeds.embedding.dims[2]) {
         throw "Different MP and TokenEmbeddding dimensions";
       }
@@ -142,17 +148,40 @@ class NanoVLMInference {
       // concat imgProjection and tokenIds over dim 1
       // let # [B, T_img + T_prompt_text, D_lm]
 
-      
+      const concatFeeds = {
+        "x": imgProjection.modality_projection_output,
+        "y": promptEmbeds.embedding
+      };
+
+      let concatText = await this.concat.run(concatFeeds);
+
+      console.log("[4/X] concat done.");
 
       const decoderFeeds = {
-        "decoder_input": null,
+        "decoder_input": concatText.x_y_concat,
         "decoder_start_pos": positionIds,
         ...pastKeyValues
       };
 
-      let prefillOutput = await this.decoderSession.run(decoderFeeds);
+      let prefillOutput = await this.decoder.run(decoderFeeds);
+
+      console.log("[5/X] decoder done.");
+
+      const lastTokenFeeds = { "x": prefillOutput.decoder_output };
       
-      console.log("DECODING...");
+      // x -> last_token
+      let lastToken = await this.lastToken.run(lastTokenFeeds);
+
+      console.log("[6/X] last token done.");
+
+      const decoderHeadFeeds = { "embedding": lastToken.last_token.reshape([1, 1, this.lmDim]) };
+
+      // embedding -> tokens
+      let currentLogits = await this.decoderHead.run(decoderHeadFeeds);
+
+      console.log("[7/X] decoder head done.");
+      
+      console.log("decode...");
       
       for (let i = 0; i < maxNewTokens; i++) {
 
