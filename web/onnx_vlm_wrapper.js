@@ -61,8 +61,18 @@ class NanoVLMInference {
     let inputs = {};
     const tokenizer = await AutoTokenizer.from_pretrained('HuggingFaceTB/cosmo2-tokenizer');
 
-    inputs["img"] = await load_image(imageURL);
-    inputs["token_ids"] = await tokenizer(question);
+    let input_img = await load_image(imageURL);
+    input_img = input_img.rgb();
+    input_img = await input_img.resize(224, 224);
+
+    // img to [1, 3, 224, 224]
+    inputs["img"] = new ort.Tensor("float32", new Float32Array(input_img.data), [1, 3, 224, 224]);
+    
+    let input_ids = await tokenizer(question);
+    input_ids = input_ids.input_ids.ort_tensor;
+
+    // input_ids to [1, 12]
+    inputs["token_ids"] = input_ids;
 
     return inputs;
   }
@@ -92,22 +102,47 @@ class NanoVLMInference {
       
       // Calculate position IDs
       // let positionIds = this.calculatePositionIds(attentionMask);
-      let positionIds = ort.Tensor("int64", new BigInt64Array([BigInt(0)]), [1]);
+      let positionIds = new ort.Tensor("int64", new BigInt64Array([BigInt(0)]), [1]);
       
       // Generation loop
       let generatedTokens = [];
       let outputText = "";
 
-      console.log("PREFILL...");
+      console.log("Prefill phase.");
 
-      // [1, , ]
-      let imgEmbed = self.visionTower.run(officialInputProcessing.img);
+      const visionTowerFeeds = {
+        "vision_tower_input": officialInputProcessing.img,
+      }
+
+      console.log("[1/X] vision tower done.");
+
+      // [1, 3, 224, 224] -> vision_tower_output
+      let imgEmbed = await this.visionTower.run(visionTowerFeeds);
+
+      const mpFeeds = {
+        "modality_projection_input": imgEmbed.vision_tower_output,
+      }
       
-      // [1, , ]
-      let imgProjection = self.mp.run(imgEmbed); 
+      // [1, 196, 768] -> [1, 49, 144] .modality_projection_output
+      let imgProjection = await this.mp.run(mpFeeds);
+
+      console.log("[2/X] modality projection done.");
+
+      const tokenEmbedFeeds = {
+        "tokens": officialInputProcessing.token_ids
+      };
+
+      // [1, 12] -> [1, 12, 216] embedding
+      let promptEmbeds = await this.tokenEmbedding.run(tokenEmbedFeeds);
+
+      if (imgProjection.modality_projection_output.dims[2] != promptEmbeds.embedding.dims[2]) {
+        throw "Different MP and TokenEmbeddding dimensions";
+      }
 
       // concat imgProjection and tokenIds over dim 1
       // let # [B, T_img + T_prompt_text, D_lm]
+
+      
 
       const decoderFeeds = {
         "decoder_input": null,
@@ -115,7 +150,7 @@ class NanoVLMInference {
         ...pastKeyValues
       };
 
-      let prefillOutput = self.decoderSession.run(decoderFeeds);
+      let prefillOutput = await this.decoderSession.run(decoderFeeds);
       
       console.log("DECODING...");
       
