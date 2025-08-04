@@ -1,9 +1,7 @@
 import { 
   AutoTokenizer,
-  load_image,
-  AutoConfig
-} from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.1';
-
+  load_image} from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.1';
+  
 // source to check for updates https://www.jsdelivr.com/package/npm/@huggingface/transformers
 
 class NanoVLMInference {
@@ -27,6 +25,7 @@ class NanoVLMInference {
     this.decoder = null;
     this.concat = null;
     this.lastToken = null;
+    this.processor = null;
     
     // Model parameters from config
     this.lmDim = this.config.lm_config.lm_dim;
@@ -63,7 +62,7 @@ class NanoVLMInference {
   async officialPreproc(imageURL, question){
 
     let inputs = {};
-    const tokenizer = await AutoTokenizer.from_pretrained('HuggingFaceTB/cosmo2-tokenizer');
+    this.processor = await AutoTokenizer.from_pretrained('HuggingFaceTB/cosmo2-tokenizer');
 
     let input_img = await load_image(imageURL);
     input_img = input_img.rgb();
@@ -72,13 +71,44 @@ class NanoVLMInference {
     // img to [1, 3, 224, 224]
     inputs["img"] = new ort.Tensor("float32", new Float32Array(input_img.data), [1, 3, 224, 224]);
     
-    let input_ids = await tokenizer(question);
+    let input_ids = await this.processor(question);
     input_ids = input_ids.input_ids.ort_tensor;
 
     // input_ids to [1, 12]
     inputs["token_ids"] = input_ids;
 
     return inputs;
+  }
+
+  /**
+   * Apply softmax with temperature.
+   * @param {number[]} logits - 1D array of filtered logits.
+   * @param {number} temperature - Temperature for softmax.
+   * @returns {number[]} Softmax probabilities.
+   */
+  softmax(logits, temperature = 1.0) {
+      const scaled = logits.map(v => v / temperature);
+      const exps = scaled.map(Math.exp);
+      const total = math.sum(exps);
+      return exps.map(v => v / total);
+  }
+
+  /**
+   * Sample a token index from a probability distribution.
+   * @param {number[]} probs - Probabilities summing to 1.
+   * @returns {number} Index of sampled token.
+   */
+  sampleFromProbs(probs) {
+      const r = Math.random();
+      let acc = 0;
+      for (let i = 0; i < probs.length; i++) {
+          acc += probs[i];
+          if (r < acc) {
+              return i;
+          }
+      }
+      // fallback (due to floating point)
+      return probs.length - 1;
   }
 
   // Main inference function
@@ -179,8 +209,8 @@ class NanoVLMInference {
 
       const decoderHeadFeeds = { "embedding": lastToken.last_token.reshape([1, 1, this.lmDim]) };
 
-      // embedding -> tokens
-      let currentLogits = await this.decoderHead.run(decoderHeadFeeds);
+      // embedding -> [1, 49k] tokens
+      let logits = await this.decoderHead.run(decoderHeadFeeds);
 
       console.log("[7/X] decoder head done.");
 
@@ -193,25 +223,24 @@ class NanoVLMInference {
       
       for (let i = 0; i < maxNewTokens; i++) {
 
-        /*
-        filtered_logits = top_k_top_p_filtering(current_logits, top_k=top_k, top_p=top_p)
-        probs = torch.softmax(filtered_logits / temperature, dim=-1)
-        next_token_id = torch.multinomial(probs, num_samples=1)
-         */
-
-        throw "Implement rows above to get nextToken";
+        const tokensData = this.getTensorData(logits.tokens);
+        const filteredLogits = this.topKTopPFiltering(tokensData, 50, 0.9);
+        const probs = this.softmax(filteredLogits, 0.5);
+        const nextToken = this.sampleFromProbs(probs);
 
         generatedTokenIds.push(nextToken);
 
+        const nextTokenOrt = new ort.Tensor("int64", new BigInt64Array([BigInt(nextToken)]), [1, 1])
+
         const tokenEmbedFeeds = {
-          "tokens": officialInputProcessing.nextToken
+          "tokens": nextTokenOrt
         };
 
         let nextTokenEmbed = await this.tokenEmbedding.run(tokenEmbedFeeds);
         
         // Run decoder model
         const decoderFeeds = {
-          'decoder_input': nextTokenEmbed,
+          'decoder_input': nextTokenEmbed.embedding,
           'decoder_start_pos': positionId,
           ...pastKeyValues
         };
@@ -229,10 +258,10 @@ class NanoVLMInference {
         const decoderHeadFeeds = { "embedding": lastToken.last_token.reshape([1, 1, this.lmDim]) };
 
         // embedding -> tokens
-        let currentLogits = await this.decoderHead.run(decoderHeadFeeds);
+        logits = await this.decoderHead.run(decoderHeadFeeds);
 
         // Update for next iteration
-        positionId = new ort.Tensor('int64', new BigInt64Array([BigInt(this.getTensorData(positionId).at(-1) + BigInt(1))]), [1, 1]);
+        positionId = new ort.Tensor('int64', new BigInt64Array([BigInt(this.getTensorData(positionId).at(-1) + BigInt(1))]), [1]);
         
         // Decode token and add to output text
         const tokenText = this.processor.decode([nextToken]);
@@ -257,6 +286,62 @@ class NanoVLMInference {
       return "An error occurred during text generation.";
     }
   }
+
+
+  /**
+   * Apply top-k and/or top-p (nucleus) filtering to logits (1D array).
+   * @param {number[]} logits Array of raw logits.
+   * @param {number} topK Keep only topK tokens with highest logits.
+   * @param {number} topP Keep smallest number of tokens whose cumulative prob ≥ topP.
+   * @param {number} filterValue Value to assign to filtered logits.
+   * @returns {number[]} Filtered logits array.
+   */
+  topKTopPFiltering(logits, topK = 0, topP = 1.0, filterValue = -Infinity) {
+      const logitsCopy = [...logits];
+      const vocabSize = logits.length;
+
+      // --- Top-K filtering ---
+      if (topK > 0 && topK < vocabSize) {
+          const topKThreshold = [...logitsCopy].sort((a, b) => b - a)[topK - 1];
+          for (let i = 0; i < vocabSize; i++) {
+              if (logitsCopy[i] < topKThreshold) {
+                  logitsCopy[i] = filterValue;
+              }
+          }
+      }
+
+      // --- Top-P (nucleus) filtering ---
+      if (topP < 1.0) {
+          // 1. Sort logits + keep track of original indices
+          const indexed = logitsCopy.map((logit, i) => ({ index: i, logit }));
+          indexed.sort((a, b) => b.logit - a.logit);
+
+          // 2. Convert to probabilities
+          const exps = indexed.map(obj => Math.exp(obj.logit));
+          const total = math.sum(exps);
+          const probs = exps.map(v => v / total);
+
+          // 3. Cumulative sum of sorted probs
+          const cumProbs = math.cumsum(probs);
+
+          // 4. Find indices where cumulative prob exceeds topP
+          let cutoff = probs.length;
+          for (let i = 0; i < cumProbs.length; i++) {
+              if (cumProbs[i] > topP) {
+                  cutoff = i + 1; // keep up to and including i
+                  break;
+              }
+          }
+
+          // 5. Zero out logits beyond cutoff
+          for (let i = cutoff; i < indexed.length; i++) {
+              logitsCopy[indexed[i].index] = filterValue;
+          }
+      }
+
+      return logitsCopy;
+  }
+
 
   // update KVs
   updatePastKV(presentKV, pastKV) {
