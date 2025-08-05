@@ -70,6 +70,13 @@ class NanoVLMInference {
 
     // img to [1, 3, 224, 224]
     inputs["img"] = new ort.Tensor("float32", new Float32Array(input_img.data), [1, 3, 224, 224]);
+
+    // normalize [0-255] to [0-1]
+    let imgArray = Array.from(this.getTensorData(inputs["img"]));
+    imgArray = imgArray.map(v => v / 255);
+
+    // rewrite tensor
+    inputs["img"] = new ort.Tensor("float32", new Float32Array(imgArray), [1, 3, 224, 224]);
     
     let input_ids = await this.processor(question);
     input_ids = input_ids.input_ids.ort_tensor;
@@ -151,7 +158,7 @@ class NanoVLMInference {
 
       console.log("[1/X] vision tower done.");
 
-      // [1, 3, 224, 224] -> vision_tower_output
+      // [1, 3, 224, 224] -> [1, 196, 768] vision_tower_output
       let imgEmbed = await this.visionTower.run(visionTowerFeeds);
 
       const mpFeeds = {
