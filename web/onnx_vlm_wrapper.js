@@ -119,7 +119,7 @@ class NanoVLMInference {
   }
 
   // Main inference function
-  async generateText(imageURL, question, maxNewTokens = 50) {
+  async generateText(imageURL, question, maxNewTokens = 150) {
     try {
 
       const officialInputProcessing = await this.officialPreproc(imageURL, question);
@@ -137,8 +137,8 @@ class NanoVLMInference {
         }
       }
       
-      let imageFeatures = null;
-      let tokenIds = officialInputProcessing.token_ids;
+      // let imageFeatures = null;
+      // let tokenIds = officialInputProcessing.token_ids;
       // let attentionMask = officialInputProcessing.attention_mask;
       
       // Calculate position IDs
@@ -147,7 +147,7 @@ class NanoVLMInference {
       let positionId = new ort.Tensor("int64", new BigInt64Array([BigInt(positionIdCounter)]), [1]);
       
       // Generation loop
-      let generatedTokens = [];
+      // let generatedTokens = [];
       let outputText = "";
 
       console.log("prefill...");
@@ -270,20 +270,22 @@ class NanoVLMInference {
         // Update for next iteration
         positionId = new ort.Tensor('int64', new BigInt64Array([BigInt(this.getTensorData(positionId).at(-1) + BigInt(1))]), [1]);
         
-        // Decode token and add to output text
-        const tokenText = this.processor.decode([nextToken]);
-        outputText += tokenText;
-        
         // Optional streaming output
         if (i % 5 === 0) {
           // TODO here call the callback to update the UI
           console.log("Generation progress:", outputText);
         }
+
+        // Decode token and add to output text
+        const tokenText = this.processor.decode([nextToken]);
         
         // Check for EOS token
-        // if (nextToken === this.eosTokenId) {
-        //   break;
-        // }
+        if (tokenText === this.processor.eos_token) {
+          break;
+        }
+
+        outputText += tokenText;
+
       }
       
       console.log("Generation complete!");
