@@ -88,7 +88,7 @@ class NanoVLMInference {
    */
   softmax(logits, temperature = 1.0) {
       const scaled = logits.map(v => v / temperature);
-      const exps = scaled.map(Math.exp);
+      const exps = scaled.map(v => math.exp(v));
       const total = math.sum(exps);
       return exps.map(v => v / total);
   }
@@ -99,7 +99,7 @@ class NanoVLMInference {
    * @returns {number} Index of sampled token.
    */
   sampleFromProbs(probs) {
-      const r = Math.random();
+      const r = math.random();
       let acc = 0;
       for (let i = 0; i < probs.length; i++) {
           acc += probs[i];
@@ -317,7 +317,7 @@ class NanoVLMInference {
           indexed.sort((a, b) => b.logit - a.logit);
 
           // 2. Convert to probabilities
-          const exps = indexed.map(obj => Math.exp(obj.logit));
+          const exps = indexed.map(obj => math.exp(obj.logit));
           const total = math.sum(exps);
           const probs = exps.map(v => v / total);
 
