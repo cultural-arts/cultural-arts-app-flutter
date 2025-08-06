@@ -136,13 +136,6 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
     // encode image as base64
     Uint8List imageBytes = await acquiredImage.readAsBytes();
 
-    var img = "https://upload.wikimedia.org/wikipedia/commons/d/d6/Ponte_Pietra_a_Verona.jpg";
-
-    var generatedText = await runNanoVLM(img).toDart as String;
-    // myDialogBuilder(context, "AI Assistant", generatedText, Icons.assistant);
-
-    return;
-
     // obtain image width and height
     var image = await decodeImageFromList(imageBytes);
     exifData['ImageLength'] = image.height.toString();
