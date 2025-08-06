@@ -10,4 +10,4 @@ external JSPromise<JSString> runNanoVLM(String imageURL);
 external JSPromise<JSBoolean> loadNanoVLM();
 
 @JS()
-external set myMethodExposedToDart(JSFunction value);
+external set tokenToUI(JSFunction value);

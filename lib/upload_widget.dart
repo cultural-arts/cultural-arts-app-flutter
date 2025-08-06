@@ -43,7 +43,7 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
     super.initState();
     // obtain the image path by using widget*
     acquiredImage = widget.acquiredImage;
-    myMethodExposedToDart = methodExposedToDart.toJS;
+    tokenToUI = updateStreamedTokens.toJS;
 
     // when this callback is called we are sure that the widget is completely build and drawn,
     // in fact the documentation says "callback after the last frame..."
@@ -123,7 +123,7 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
   }
 
   // https://dart.dev/interop/js-interop/usage#export
-  void methodExposedToDart(JSString token) {
+  void updateStreamedTokens(JSString token) {
     final tokenStr = token.toDart;
     setState(() {
       streamedTokens.add(tokenStr);

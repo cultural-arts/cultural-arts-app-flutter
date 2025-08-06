@@ -286,7 +286,7 @@ class NanoVLMInference {
 
         outputText += tokenText;
 
-        globalThis.myMethodExposedToDart(tokenText);
+        globalThis.tokenToUI(tokenText);
 
       }
       
