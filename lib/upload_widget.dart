@@ -34,26 +34,30 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
   String? base64Image; // the base64 image version
   Map<String, String> exifData = {}; // the exif data container
 
+  // for streaming tokens
+  List<String> streamedTokens = [];
+  String get streamedText => streamedTokens.join();
+
   @override
   void initState() {
     super.initState();
     // obtain the image path by using widget*
     acquiredImage = widget.acquiredImage;
     myMethodExposedToDart = methodExposedToDart.toJS;
-  }
-
-  @override
-  Widget build(BuildContext context) {
 
     // when this callback is called we are sure that the widget is completely build and drawn,
     // in fact the documentation says "callback after the last frame..."
     SchedulerBinding.instance.addPostFrameCallback((timeStamp) {
       try {
-        uploadPhoto(context);
+        uploadPhoto(context); // context is captured from the State object
       } on PlatformException catch (e) {
         myDialogBuilder(context, "Error 01", "$e", Icons.error);
       }
     },);
+  }
+
+  @override
+  Widget build(BuildContext context) {
 
     return Scaffold(
       backgroundColor: Theme.of(context).primaryColor,
@@ -73,15 +77,35 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
               'assets/images/custom_icons_il_santo.png', // Replace with the path to your custom PNG icon
             ),
             const SizedBox(height: 32.0), // Space between spinner and icon
-            const Text(
-              "searching for arts...",
-              style: TextStyle(
-                color: Colors.white, // Title text color
+            streamedText.isEmpty ?
+              const Column(
+                children: [
+                  Text(
+                    "searching for arts...",
+                    style: TextStyle(color: Colors.white,),
+                  ),
+                  SizedBox(height: 16.0),
+                  CircularProgressIndicator(color: Colors.white), // Loading spinner
+                  SizedBox(height: 32.0),
+                ]
+              ) : 
+              const Column(
+                children: [
+                  Text("Art Assistant", style: TextStyle(fontSize: 18, color: Colors.white,),),
+                  SizedBox(height: 16.0),
+                ],
+              ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: SingleChildScrollView(
+                  child: Text(
+                    streamedText,
+                    style: const TextStyle(color: Colors.white, fontSize: 14),
+                  ),
+                ),
               ),
             ),
-            const SizedBox(height: 16.0),
-            const CircularProgressIndicator(
-                color: Colors.white), // Loading spinner
           ],
         ),
       ),
@@ -98,8 +122,12 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
     return '{${keyValuePairs.join(',')}}';
   }
 
+  // https://dart.dev/interop/js-interop/usage#export
   void methodExposedToDart(JSString token) {
-    print(token.toDart);
+    final tokenStr = token.toDart;
+    setState(() {
+      streamedTokens.add(tokenStr);
+    });
   }
 
   void uploadPhoto(context) async {
@@ -111,7 +139,7 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
     var img = "https://upload.wikimedia.org/wikipedia/commons/d/d6/Ponte_Pietra_a_Verona.jpg";
 
     var generatedText = await runNanoVLM(img).toDart as String;
-    myDialogBuilder(context, "AI Assistant", generatedText, Icons.assistant);
+    // myDialogBuilder(context, "AI Assistant", generatedText, Icons.assistant);
 
     return;
 
