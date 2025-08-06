@@ -187,7 +187,6 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
       case CommunicationDriver.http231CulturalArtsNoResultsFound:
         // "https://cdn.britannica.com/61/93061-050-99147DCE/Statue-of-Liberty-Island-New-York-Bay.jpg"
         var generatedText = await runNanoVLM(acquiredImage.path).toDart as String;
-        myDialogBuilder(context, "AI Assistant", generatedText, Icons.assistant);
         break;
       case CommunicationDriver.http452CulturalArtsInvalidImg:
         break;
