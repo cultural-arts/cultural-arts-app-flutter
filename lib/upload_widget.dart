@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:js_interop';
+import 'dart:js_interop_unsafe';
 
 import 'package:camera/camera.dart';
 import 'package:cultural_arts/api/art_suggestion_api.dart';
@@ -9,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:web/web.dart' as web;
 
 import 'utils/geo_utilities.dart';
 import 'onnx_vlm.dart';
@@ -37,6 +39,7 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
     super.initState();
     // obtain the image path by using widget*
     acquiredImage = widget.acquiredImage;
+    myMethodExposedToDart = methodExposedToDart.toJS;
   }
 
   @override
@@ -95,11 +98,22 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
     return '{${keyValuePairs.join(',')}}';
   }
 
+  void methodExposedToDart(JSString token) {
+    print(token.toDart);
+  }
+
   void uploadPhoto(context) async {
     uploadAttempts--;
 
     // encode image as base64
     Uint8List imageBytes = await acquiredImage.readAsBytes();
+
+    var img = "https://upload.wikimedia.org/wikipedia/commons/d/d6/Ponte_Pietra_a_Verona.jpg";
+
+    var generatedText = await runNanoVLM(img).toDart as String;
+    myDialogBuilder(context, "AI Assistant", generatedText, Icons.assistant);
+
+    return;
 
     // obtain image width and height
     var image = await decodeImageFromList(imageBytes);

@@ -38,7 +38,7 @@ class NanoVLMInference {
   // Initialize ONNX sessions
   async loadModels() {
     try {
-      console.log("Loading ONNX models...");
+      console.log("Loading models...");
       
       // Load all three models in parallel
       [this.visionTower, this.mp, this.tokenEmbedding, this.decoderHead, this.decoder, this.concat, this.lastToken] = await Promise.all([
@@ -285,6 +285,8 @@ class NanoVLMInference {
         }
 
         outputText += tokenText;
+
+        globalThis.myMethodExposedToDart(tokenText);
 
       }
       
