@@ -40,6 +40,9 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
+
+  final loadingMessageNotifier = ValueNotifier<String>("Loading AI Models, please wait...");
+
   // Initialize a variable to track whether location data has been loaded
   late Future<bool> vlmLoadingFuture;
   late LocationPermission locationDataState = LocationPermission.unableToDetermine;
@@ -56,8 +59,13 @@ class _MyAppState extends State<MyApp> {
   void initState() {
     super.initState();
     // Call initPosition() asynchronously and wait for it to complete
+    updateUILoadingSteps = updateLoadingSteps.toJS;
     vlmLoadingFuture = loadNanoVLM().toDart as Future<bool>;
     updateLocationDataState();
+  }
+
+  void updateLoadingSteps(JSString text){
+    loadingMessageNotifier.value = text.toDart;
   }
 
   @override
@@ -72,7 +80,7 @@ class _MyAppState extends State<MyApp> {
         future: vlmLoadingFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const LoadingScreen(); // Show spinner while VLM loads
+            return LoadingScreen(notifier: loadingMessageNotifier); // Show spinner while VLM loads
           } else if (snapshot.hasError || snapshot.data == false) {
             return const ErrorScreen(); // Show error if loading fails
           }
@@ -95,8 +103,10 @@ class ErrorScreen extends StatelessWidget {
   }
 }
 
-Widget _buildHomeWidget(LocationPermission locationDataState,
-    void Function() askForLocationsPermission) {
+Widget _buildHomeWidget(LocationPermission locationDataState, void Function() askForLocationsPermission) {
+
+  final loadingMessageNotifier = ValueNotifier<String>("You can't deny basic serives as camera or internet connections by using this app...");
+
   switch (locationDataState) {
     case LocationPermission.whileInUse:
       return const MyHomePage(title: 'cultural-arts.com');
@@ -115,7 +125,7 @@ Widget _buildHomeWidget(LocationPermission locationDataState,
         },
       );
     default:
-      return const LoadingScreen();
+      return LoadingScreen(notifier: loadingMessageNotifier);
   }
 }
 
@@ -150,27 +160,30 @@ class LocationPermissionWidget extends StatelessWidget {
 }
 
 class LoadingScreen extends StatelessWidget {
-  final String message;
+  final ValueNotifier<String> notifier;
 
-  const LoadingScreen({super.key, this.message = "Loading AI Models, please wait..."});
+  const LoadingScreen({super.key, required this.notifier});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const CircularProgressIndicator(),
-            const SizedBox(height: 20),
-            Text(
-              message,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              textAlign: TextAlign.center,
+        child: ValueListenableBuilder(
+          valueListenable: notifier,
+          builder: (context, message, _) => Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(height: 20),
+                Text(
+                  message,
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ),
-          ],
         ),
-      ),
+      )
     );
   }
 }

@@ -11,3 +11,6 @@ external JSPromise<JSBoolean> loadNanoVLM();
 
 @JS()
 external set tokenToUI(JSFunction value);
+
+@JS()
+external set updateUILoadingSteps(JSFunction value);

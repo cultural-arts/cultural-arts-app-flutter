@@ -38,20 +38,35 @@ class NanoVLMInference {
   // Initialize ONNX sessions
   async loadModels() {
     try {
-      console.log("Loading models...");
-      
-      // Load all three models in parallel
-      [this.visionTower, this.mp, this.tokenEmbedding, this.decoderHead, this.decoder, this.concat, this.lastToken] = await Promise.all([
-        ort.InferenceSession.create('./nanoVLM_vision_tower.onnx', { executionProviders: ['webgpu'] }),
-        ort.InferenceSession.create('./nanoVLM_mp.onnx', { executionProviders: ['webgpu'] }),
-        ort.InferenceSession.create('./nanoVLM_decoder_token_embedding.onnx', { executionProviders: ['webgpu'] }),
-        ort.InferenceSession.create('./nanoVLM_decoder_head.onnx', { executionProviders: ['webgpu'] }),
-        ort.InferenceSession.create('./nanoVLM_decoder.onnx', { executionProviders: ['webgpu'] }),
-        ort.InferenceSession.create('./nanoVLM_dynamicconcat.onnx', { executionProviders: ['webgpu'] }),
-        ort.InferenceSession.create('./nanoVLM_last_token.onnx', { executionProviders: ['webgpu'] })
+
+      globalThis.updateUILoadingSteps("Initializing AI models...");
+
+      const loadModel = async (path, label) => {
+        globalThis.updateUILoadingSteps(`Loading ${label}...`);
+        const model = await ort.InferenceSession.create(path, { executionProviders: ['webgpu'] });
+        globalThis.updateUILoadingSteps(`${label} loaded.`);
+        return model;
+      };
+
+      [
+        this.visionTower,
+        this.mp,
+        this.tokenEmbedding,
+        this.decoderHead,
+        this.decoder,
+        this.concat,
+        this.lastToken
+      ] = await Promise.all([
+        loadModel('./nanoVLM_vision_tower.onnx', '[1/7] Vision Tower'),
+        loadModel('./nanoVLM_mp.onnx', '[2/7] MP'),
+        loadModel('./nanoVLM_decoder_token_embedding.onnx', '[3/7] Token Embedding'),
+        loadModel('./nanoVLM_decoder_head.onnx', '[4/7] Decoder Head'),
+        loadModel('./nanoVLM_decoder.onnx', '[5/7] Decoder'),
+        loadModel('./nanoVLM_dynamicconcat.onnx', '[6/7] Dynamic Concat'),
+        loadModel('./nanoVLM_last_token.onnx', '[7/7] Last Token')
       ]);
-      
-      console.log("Models loaded successfully!");
+
+      globalThis.updateUILoadingSteps("All models loaded successfully.");
       return true;
     } catch (error) {
       console.error("Error loading models:", error);
