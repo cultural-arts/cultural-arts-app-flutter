@@ -44,7 +44,6 @@ class NanoVLMInference {
       const loadModel = async (path, label) => {
         globalThis.updateUILoadingSteps(`Loading ${label}...`);
         const model = await ort.InferenceSession.create(path, { executionProviders: ['webgpu'] });
-        globalThis.updateUILoadingSteps(`${label} loaded.`);
         return model;
       };
 
@@ -57,13 +56,13 @@ class NanoVLMInference {
         this.concat,
         this.lastToken
       ] = await Promise.all([
-        loadModel('./nanoVLM_vision_tower.onnx', '[1/7] Vision Tower'),
-        loadModel('./nanoVLM_mp.onnx', '[2/7] MP'),
-        loadModel('./nanoVLM_decoder_token_embedding.onnx', '[3/7] Token Embedding'),
-        loadModel('./nanoVLM_decoder_head.onnx', '[4/7] Decoder Head'),
-        loadModel('./nanoVLM_decoder.onnx', '[5/7] Decoder'),
-        loadModel('./nanoVLM_dynamicconcat.onnx', '[6/7] Dynamic Concat'),
-        loadModel('./nanoVLM_last_token.onnx', '[7/7] Last Token')
+        loadModel('./nanoVLM_vision_tower.onnx', 'Vision Tower'),
+        loadModel('./nanoVLM_mp.onnx', 'MP'),
+        loadModel('./nanoVLM_decoder_token_embedding.onnx', 'Token Embedding'),
+        loadModel('./nanoVLM_decoder_head.onnx', 'Decoder Head'),
+        loadModel('./nanoVLM_decoder.onnx', 'Decoder'),
+        loadModel('./nanoVLM_dynamicconcat.onnx', 'Dynamic Concat'),
+        loadModel('./nanoVLM_last_token.onnx', 'Last Token')
       ]);
 
       globalThis.updateUILoadingSteps("All models loaded successfully.");
