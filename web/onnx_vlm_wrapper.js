@@ -41,8 +41,11 @@ class NanoVLMInference {
 
       globalThis.updateUILoadingSteps("Initializing AI models...");
 
+      let loadingCounter = 1;
+
       const loadModel = async (path, label) => {
-        globalThis.updateUILoadingSteps(`Loading ${label}...`);
+        globalThis.updateUILoadingSteps(`Loading AI model [${loadingCounter++}/7]...`);
+        console.log(`Loading AI model ${label}...`);
         const model = await ort.InferenceSession.create(path, { executionProviders: ['webgpu'] });
         return model;
       };
