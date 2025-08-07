@@ -61,7 +61,7 @@ class NanoVLMInference {
       ] = await Promise.all([
         loadModel('./nanoVLM_vision_tower.onnx', 'Vision Tower'),
         loadModel('./nanoVLM_mp.onnx', 'MP'),
-        loadModel('./nanoVLM_decoder_token_embedding_fp16.onnx', 'Token Embedding'),
+        loadModel('./nanoVLM_decoder_token_embedding.onnx', 'Token Embedding'),
         loadModel('./nanoVLM_decoder_head_int8.onnx', 'Decoder Head [int8]'),
         loadModel('./nanoVLM_decoder.onnx', 'Decoder'),
         loadModel('./nanoVLM_dynamicconcat.onnx', 'Dynamic Concat'),
@@ -194,12 +194,6 @@ class NanoVLMInference {
       // [1, 12] -> [1, 12, 216] embedding
       const promptEmbeds = await this.tokenEmbedding.run(tokenEmbedFeeds);
 
-      const promptEmbedsfp32 = new ort.Tensor(
-        "float32",
-        new Float32Array(this.getTensorData(promptEmbeds.embedding)),
-        promptEmbeds.embedding.dims
-      )
-
       console.log("[3/X] token embedding done.");
 
       if (imgProjection.modality_projection_output.dims[2] != promptEmbeds.embedding.dims[2]) {
@@ -211,7 +205,7 @@ class NanoVLMInference {
 
       const concatFeeds = {
         "x": imgProjection.modality_projection_output,
-        "y": promptEmbedsfp32
+        "y": promptEmbeds.embedding
       };
 
       let concatText = await this.concat.run(concatFeeds);
@@ -267,16 +261,10 @@ class NanoVLMInference {
         };
 
         const nextTokenEmbed = await this.tokenEmbedding.run(tokenEmbedFeeds);
-
-        const nextTokenEmbedfp32 = new ort.Tensor(
-          "float32",
-          new Float32Array(this.getTensorData(nextTokenEmbed.embedding)),
-          nextTokenEmbed.embedding.dims
-        )
         
         // Run decoder model
         const decoderFeeds = {
-          'decoder_input': nextTokenEmbedfp32,
+          'decoder_input': nextTokenEmbed.embedding,
           'decoder_start_pos': positionId,
           ...pastKeyValues
         };
