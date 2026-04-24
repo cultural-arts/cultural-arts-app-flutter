@@ -266,9 +266,10 @@ Widget build(BuildContext context) {
               "No photos yet.\nStart capturing cultural heritage!",
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.w500,
+                color: Color.fromARGB(255, 0, 0, 0),
+                fontSize: 20,
+                fontFamily: 'Roboto',
+                fontWeight: FontWeight.w800,
               ),
             ),
           ),
