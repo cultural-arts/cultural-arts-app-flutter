@@ -35,8 +35,7 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   // Initialize a variable to track whether location data has been loaded
-  late LocationPermission locationDataState =
-      LocationPermission.unableToDetermine;
+  late LocationPermission locationDataState = LocationPermission.unableToDetermine;
 
   void updateLocationDataState() {
     initPosition().then((value) {
