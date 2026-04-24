@@ -248,13 +248,15 @@ Widget build(BuildContext context) {
     // ALWAYS VISIBLE CAMERA BUTTON
     // ----------------------------
     floatingActionButton: FloatingActionButton(
-      onPressed: () {
-        Navigator.push(
+      onPressed: () async {
+        await Navigator.push(
           context,
           MaterialPageRoute(
             builder: (_) => const CameraScreen(),
           ),
         );
+
+        setState(() { }); // refresh
       },
       child: const Icon(Icons.add_a_photo),
     ),
