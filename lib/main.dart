@@ -53,7 +53,7 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Cultural Arts',
+      title: 'cultural-arts.com',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color.fromRGBO(41, 182, 246, 1),
@@ -68,12 +68,12 @@ class _MyAppState extends State<MyApp> {
     switch (permission) {
       case LocationPermission.whileInUse:
       case LocationPermission.always:
-        return const MyHomePage(title: 'Cultural Arts');
+        return const MyHomePage(title: 'cultural-arts.com');
 
       case LocationPermission.denied:
       case LocationPermission.deniedForever:
         if (useFakeLocation) {
-          return const MyHomePage(title: 'Cultural Arts (DEV MODE)');
+          return const MyHomePage(title: 'cultural-arts.com (DEV MODE)');
         }
         return LocationPermissionWidget(onRetry: _init);
 
