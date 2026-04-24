@@ -19,4 +19,5 @@ class WebPhotoStorage {
   static Future<void> clear() async {
     await _box.clear();
   }
+
 }

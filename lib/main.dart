@@ -168,9 +168,40 @@ Widget build(BuildContext context) {
 
   return Scaffold(
     appBar: AppBar(
-      title: Text(widget.title),
-      backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-    ),
+    title: Text(widget.title),
+    backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+    actions: [
+      IconButton(
+        icon: const Icon(Icons.delete_forever),
+        onPressed: () async {
+          final confirm = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text("Delete all photos?"),
+              content: const Text(
+                "This will permanently remove all stored images.",
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text("Cancel"),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text("Delete"),
+                ),
+              ],
+            ),
+          );
+
+          if (confirm == true) {
+            await WebPhotoStorage.clear();
+            setState(() {});
+          }
+        },
+      ),
+    ],
+  ),
 
     body: Stack(
       children: [
