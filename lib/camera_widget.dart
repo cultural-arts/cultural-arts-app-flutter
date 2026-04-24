@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:camera/camera.dart';
 import 'package:cultural_arts/upload_widget.dart';
+import 'package:cultural_arts/utils/web_storage.dart';
 import 'package:flutter/material.dart';
 import 'dart:math' as math; // Import the math library
 
@@ -104,17 +106,21 @@ class TakePictureScreenState extends State<TakePictureScreen> {
 
             // Attempt to take a picture and get the file `image`
             // where it was saved.
-            final image = await _controller.takePicture();
+            final acquiredImage = await _controller.takePicture();
 
             if (!mounted) return;
 
-            // If the picture was taken, display it on a new screen.
+            // If the picture was taken, save it in the local storage to show in the main screen.
+            Uint8List imageBytes = await acquiredImage.readAsBytes();
+            await WebPhotoStorage.savePhoto(imageBytes);
+
+            // If the picture was taken, pass it to the upload screen.
             await Navigator.of(context).push(
               MaterialPageRoute(
                 builder: (context) => UploadPhoto(
                   // Pass the automatically generated path to
                   // the DisplayPictureScreen widget.
-                  acquiredImage: image,
+                  acquiredImage: acquiredImage,
                 ),
               ),
             );

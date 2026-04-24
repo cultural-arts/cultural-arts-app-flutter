@@ -1,10 +1,19 @@
 import 'package:cultural_arts/utils/geo_utilities.dart';
+import 'package:cultural_arts/utils/web_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'camera_screen.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
-void main() {
+
+void main() async {
+  // hive stuff
+  WidgetsFlutterBinding.ensureInitialized();
+  await Hive.initFlutter();
+  await Hive.openBox('photos');
+
+  // main app
   runApp(const MyApp());
 }
 
@@ -154,44 +163,101 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.title),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-      ),
+Widget build(BuildContext context) {
+  final photos = WebPhotoStorage.getPhotos();
 
-      body: Stack(
-        children: [
-          Container(
-            decoration: const BoxDecoration(
-              image: DecorationImage(
-                image: AssetImage('assets/images/take_statue_picture.png'),
-                fit: BoxFit.cover,
+  return Scaffold(
+    appBar: AppBar(
+      title: Text(widget.title),
+      backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+    ),
+
+    body: Stack(
+      children: [
+        // ----------------------------
+        // BACKGROUND / EMPTY STATE
+        // ----------------------------
+        Container(
+          decoration: const BoxDecoration(
+            image: DecorationImage(
+              image: AssetImage('assets/images/take_statue_picture.png'),
+              fit: BoxFit.cover,
+            ),
+          ),
+        ),
+
+        // ----------------------------
+        // DEV MODE INDICATOR
+        // ----------------------------
+        if (useFakeLocation)
+          const Positioned(
+            top: 40,
+            left: 20,
+            child: Chip(
+              label: Text("DEV MODE - FAKE LOCATION"),
+            ),
+          ),
+
+        // ----------------------------
+        // PHOTO GRID (IF EXISTS)
+        // ----------------------------
+        if (photos.isNotEmpty)
+          Positioned.fill(
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: GridView.builder(
+                itemCount: photos.length,
+                gridDelegate:
+                    const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3,
+                  crossAxisSpacing: 8,
+                  mainAxisSpacing: 8,
+                ),
+                itemBuilder: (context, index) {
+                  return ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.memory(
+                      photos[index],
+                      fit: BoxFit.cover,
+                    ),
+                  );
+                },
               ),
             ),
           ),
 
-          if (useFakeLocation)
-            const Positioned(
-              top: 40,
-              left: 20,
-              child: Chip(
-                label: Text("DEV MODE - FAKE LOCATION"),
+        // ----------------------------
+        // EMPTY STATE MESSAGE
+        // ----------------------------
+        if (photos.isEmpty)
+          const Center(
+            child: Text(
+              "No photos yet.\nStart capturing cultural heritage!",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.w500,
               ),
             ),
-        ],
-      ),
+          ),
+      ],
+    ),
 
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const CameraScreen()),
-          );
-        },
-        child: const Icon(Icons.add_a_photo),
-      ),
-    );
-  }
+    // ----------------------------
+    // ALWAYS VISIBLE CAMERA BUTTON
+    // ----------------------------
+    floatingActionButton: FloatingActionButton(
+      onPressed: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const CameraScreen(),
+          ),
+        );
+      },
+      child: const Icon(Icons.add_a_photo),
+    ),
+  );
+}
 }
