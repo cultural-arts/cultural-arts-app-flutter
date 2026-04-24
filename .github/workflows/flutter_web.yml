@@ -1,0 +1,35 @@
+name: Flutter Web Build
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-web:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.41.7'
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Enable Web
+        run: flutter config --enable-web
+
+      - name: Build Web
+        run: flutter build web --release
+
+      - name: Deploy build files via SSH
+        run: |
+          sshpass -p "${{ secrets.SERVER_PASS }}" rsync -az --delete \
+            -e "ssh -o StrictHostKeyChecking=no" \
+            build/web/ \
+            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/root/cultural-arts-web-app-build/contributor/
