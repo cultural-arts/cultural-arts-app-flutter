@@ -1,7 +1,5 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:http/http.dart' as http;
-import 'classes/art_suggestions.dart';
 
 class ArtSuggestionsAPI {
   final String baseUrl;
