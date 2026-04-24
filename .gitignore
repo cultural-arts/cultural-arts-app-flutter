@@ -45,3 +45,6 @@ app.*.map.json
 
 .venv
 .vscode/launch.json
+*.onnx
+*.jpg
+*.swift
