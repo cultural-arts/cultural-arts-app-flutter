@@ -1,3 +1,4 @@
+import 'package:cultural_arts/utils/geo_utilities.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
@@ -12,66 +13,6 @@ void main() {
 /// ---------------------------
 
 const bool useFakeLocation = kDebugMode;
-
-// posizione default (Vicenza)
-const double fallbackLat = 45.5455;
-const double fallbackLon = 11.5354;
-
-/// ---------------------------
-/// LOCATION SERVICE
-/// ---------------------------
-
-class LocationService {
-  static Future<LocationPermission> checkPermission() async {
-    if (useFakeLocation) {
-      return LocationPermission.whileInUse;
-    }
-
-    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      return LocationPermission.unableToDetermine;
-    }
-
-    LocationPermission permission = await Geolocator.checkPermission();
-
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-    }
-
-    return permission;
-  }
-
-  static Future<Position> getPosition() async {
-    if (useFakeLocation) {
-      return Position(
-        latitude: fallbackLat,
-        longitude: fallbackLon,
-        timestamp: DateTime.now(),
-        accuracy: 1,
-        altitude: 0,
-        heading: 0,
-        speed: 0,
-        speedAccuracy: 0,
-      );
-    }
-
-    try {
-      return await Geolocator.getCurrentPosition();
-    } catch (_) {
-      // fallback automatico se bloccato da admin
-      return Position(
-        latitude: fallbackLat,
-        longitude: fallbackLon,
-        timestamp: DateTime.now(),
-        accuracy: 100,
-        altitude: 0,
-        heading: 0,
-        speed: 0,
-        speedAccuracy: 0,
-      );
-    }
-  }
-}
 
 /// ---------------------------
 /// APP
