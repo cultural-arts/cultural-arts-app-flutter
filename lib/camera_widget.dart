@@ -6,6 +6,7 @@ import 'package:camera/camera.dart';
 import 'package:cultural_arts/upload_widget.dart';
 import 'package:cultural_arts/utils/web_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:image/image.dart' as img;
 import 'dart:math' as math; // Import the math library
 
 // A screen that allows users to take a picture using a given camera.
@@ -20,11 +21,13 @@ class TakePictureScreenState extends State<TakePictureScreen> {
   late CameraController _controller;
   late Future<void>? _initializeControllerFuture;
   late List<CameraDescription> _cameras; // Add this line
+  late Orientation _currentOrientation; // Track current orientation
 
   @override
   void initState() {
     super.initState();
     _initializeControllerFuture = null;
+    _currentOrientation = MediaQuery.of(context).orientation;
     _initializeCamera();
   }
 
@@ -110,8 +113,16 @@ class TakePictureScreenState extends State<TakePictureScreen> {
 
             if (!mounted) return;
 
-            // If the picture was taken, save it in the local storage to show in the main screen.
+            // Capture the current orientation when the picture is taken
+            Orientation captureOrientation = MediaQuery.of(context).orientation;
+
+            // Read the image bytes
             Uint8List imageBytes = await acquiredImage.readAsBytes();
+            
+            // Rotate the image based on device orientation
+            imageBytes = await _rotateImageByOrientation(imageBytes, captureOrientation);
+
+            // If the picture was taken, save it in the local storage to show in the main screen.
             await WebPhotoStorage.savePhoto(imageBytes);
 
             // If the picture was taken, pass it to the upload screen.
@@ -147,7 +158,34 @@ class TakePictureScreenState extends State<TakePictureScreen> {
       case Orientation.portrait:
         return 0;
       case Orientation.landscape:
-        return 0;
+        return math.pi / 2; // 90 degrees in radians
+    }
+  }
+
+  Future<Uint8List> _rotateImageByOrientation(Uint8List imageBytes, Orientation orientation) async {
+    try {
+      // Decode the image
+      img.Image? image = img.decodeImage(imageBytes);
+      
+      if (image == null) {
+        return imageBytes; // Return original if decode fails
+      }
+
+      // Rotate the image based on orientation
+      img.Image rotatedImage;
+      if (orientation == Orientation.landscape) {
+        // Rotate 90 degrees clockwise for landscape
+        rotatedImage = img.copyRotate(image, angle: 90);
+      } else {
+        // No rotation needed for portrait
+        rotatedImage = image;
+      }
+
+      // Encode back to bytes
+      return Uint8List.fromList(img.encodeJpg(rotatedImage));
+    } catch (e) {
+      print('Error rotating image: $e');
+      return imageBytes; // Return original if rotation fails
     }
   }
 }
