@@ -6,7 +6,6 @@ import 'package:geolocator/geolocator.dart';
 import 'camera_screen.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
-
 void main() async {
   // hive stuff
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,6 +21,8 @@ void main() async {
 /// ---------------------------
 
 const bool useFakeLocation = kDebugMode;
+const String appVersion = String.fromEnvironment('APP_VERSION', defaultValue: 'unknown');
+const String appEnv = String.fromEnvironment('APP_ENV', defaultValue: kReleaseMode ? 'production' : 'development');
 
 /// ---------------------------
 /// APP
@@ -162,136 +163,156 @@ class _MyHomePageState extends State<MyHomePage> {
     });
   }
 
-  @override
-Widget build(BuildContext context) {
-  final photos = WebPhotoStorage.getPhotos();
+  void _showVersionDialog() {
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('App environment'),
+        content: const Text(
+          'Environment: $appEnv\nVersion: $appVersion',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
 
-  return Scaffold(
-    appBar: AppBar(
-    title: Text(widget.title),
-    backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-    actions: [
-      IconButton(
-        icon: const Icon(Icons.delete_forever),
-        onPressed: () async {
-          final confirm = await showDialog<bool>(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: const Text("Delete all photos?"),
-              content: const Text(
-                "This will permanently remove all stored images.",
+  @override
+  Widget build(BuildContext context) {
+    final photos = WebPhotoStorage.getPhotos();
+
+    return Scaffold(
+      appBar: AppBar(
+        title: GestureDetector(
+          onTap: _showVersionDialog,
+          child: Text(widget.title),
+        ),
+        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.delete_forever),
+            onPressed: () async {
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text("Delete all photos?"),
+                  content: const Text(
+                    "This will permanently remove all stored images.",
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text("Cancel"),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      child: const Text("Delete"),
+                    ),
+                  ],
+                ),
+              );
+
+              if (confirm == true) {
+                await WebPhotoStorage.clear();
+                setState(() {});
+              }
+            },
+          ),
+        ],
+      ),
+
+      body: Stack(
+        children: [
+          // ----------------------------
+          // BACKGROUND / EMPTY STATE
+          // ----------------------------
+          Container(
+            decoration: const BoxDecoration(
+              image: DecorationImage(
+                image: AssetImage('assets/images/take_statue_picture.png'),
+                fit: BoxFit.cover,
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: const Text("Cancel"),
+            ),
+          ),
+
+          // ----------------------------
+          // DEV MODE INDICATOR
+          // ----------------------------
+          if (useFakeLocation)
+            const Positioned(
+              top: 40,
+              left: 20,
+              child: Chip(
+                label: Text("DEV MODE - FAKE LOCATION"),
+              ),
+            ),
+
+          // ----------------------------
+          // PHOTO GRID (IF EXISTS)
+          // ----------------------------
+          if (photos.isNotEmpty)
+            Positioned.fill(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: GridView.builder(
+                  itemCount: photos.length,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                    crossAxisSpacing: 8,
+                    mainAxisSpacing: 8,
+                  ),
+                  itemBuilder: (context, index) {
+                    return ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.memory(
+                        photos[index],
+                        fit: BoxFit.cover,
+                      ),
+                    );
+                  },
                 ),
-                TextButton(
-                  onPressed: () => Navigator.pop(context, true),
-                  child: const Text("Delete"),
+              ),
+            ),
+
+          // ----------------------------
+          // EMPTY STATE MESSAGE
+          // ----------------------------
+          if (photos.isEmpty)
+            const Center(
+              child: Text(
+                "No photos yet.\nStart capturing cultural heritage!",
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Color.fromARGB(255, 0, 0, 0),
+                  fontSize: 20,
+                  fontFamily: 'Roboto',
+                  fontWeight: FontWeight.w800,
                 ),
-              ],
+              ),
+            ),
+        ],
+      ),
+
+      // ----------------------------
+      // ALWAYS VISIBLE CAMERA BUTTON
+      // ----------------------------
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const CameraScreen(),
             ),
           );
 
-          if (confirm == true) {
-            await WebPhotoStorage.clear();
-            setState(() {});
-          }
+          setState(() {}); // refresh
         },
+        child: const Icon(Icons.add_a_photo),
       ),
-    ],
-  ),
-
-    body: Stack(
-      children: [
-        // ----------------------------
-        // BACKGROUND / EMPTY STATE
-        // ----------------------------
-        Container(
-          decoration: const BoxDecoration(
-            image: DecorationImage(
-              image: AssetImage('assets/images/take_statue_picture.png'),
-              fit: BoxFit.cover,
-            ),
-          ),
-        ),
-
-        // ----------------------------
-        // DEV MODE INDICATOR
-        // ----------------------------
-        if (useFakeLocation)
-          const Positioned(
-            top: 40,
-            left: 20,
-            child: Chip(
-              label: Text("DEV MODE - FAKE LOCATION"),
-            ),
-          ),
-
-        // ----------------------------
-        // PHOTO GRID (IF EXISTS)
-        // ----------------------------
-        if (photos.isNotEmpty)
-          Positioned.fill(
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: GridView.builder(
-                itemCount: photos.length,
-                gridDelegate:
-                    const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  crossAxisSpacing: 8,
-                  mainAxisSpacing: 8,
-                ),
-                itemBuilder: (context, index) {
-                  return ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.memory(
-                      photos[index],
-                      fit: BoxFit.cover,
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
-
-        // ----------------------------
-        // EMPTY STATE MESSAGE
-        // ----------------------------
-        if (photos.isEmpty)
-          const Center(
-            child: Text(
-              "No photos yet.\nStart capturing cultural heritage!",
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Color.fromARGB(255, 0, 0, 0),
-                fontSize: 20,
-                fontFamily: 'Roboto',
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
-      ],
-    ),
-
-    // ----------------------------
-    // ALWAYS VISIBLE CAMERA BUTTON
-    // ----------------------------
-    floatingActionButton: FloatingActionButton(
-      onPressed: () async {
-        await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => const CameraScreen(),
-          ),
-        );
-
-        setState(() { }); // refresh
-      },
-      child: const Icon(Icons.add_a_photo),
-    ),
-  );
-}
+    );
+  }
 }
