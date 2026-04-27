@@ -6,7 +6,7 @@ import 'package:camera/camera.dart';
 import 'package:cultural_arts/upload_widget.dart';
 import 'package:cultural_arts/utils/web_storage.dart';
 import 'package:flutter/material.dart';
-import 'dart:math' as math;
+import 'package:universal_html/html.dart' as html;
 
 import 'package:flutter/services.dart'; // Import the math library
 
@@ -45,9 +45,10 @@ class TakePictureScreenState extends State<TakePictureScreen> {
       _initializeControllerFuture = _controller.initialize();
 
       // Lock capture orientation after initialization completes
-      _initializeControllerFuture?.then((_) {
-        _controller.lockCaptureOrientation(DeviceOrientation.portraitUp);
-      });
+      // _initializeControllerFuture?.then((_) {
+        // Allows to make the camera fullscreen, do not solve the image orientation error when device rotates
+        // _controller.lockCaptureOrientation(DeviceOrientation.portraitUp);
+      // });
 
       if (mounted) {
         setState(() {});
@@ -85,13 +86,13 @@ class TakePictureScreenState extends State<TakePictureScreen> {
               return OrientationBuilder(
                 builder: (context, orientation) {
                   return Transform.rotate(
-                    angle: _getCameraAngle(orientation),
-                    child: Center(
-                      child: AspectRatio(
-                        aspectRatio: _controller.value.aspectRatio,
-                        child: CameraPreview(_controller),
-                      ),
-                    ),
+                        angle: _getCameraAngle(orientation),
+                        child: Center(
+                          child: AspectRatio(
+                            aspectRatio: _controller.value.aspectRatio,
+                            child: CameraPreview(_controller),
+                          ),
+                        ),
                   );
                 },
               );
@@ -155,6 +156,23 @@ class TakePictureScreenState extends State<TakePictureScreen> {
         return 0;
       case Orientation.landscape:
         return 0;
+    }
+  }
+
+  String getOrientationName() {
+    final angle = html.window.screen?.orientation?.angle ?? 0;
+
+    switch (angle) {
+      case 0:
+        return "portrait";
+      case 90:
+        return "landscape-left";
+      case 180:
+        return "portrait-upside-down";
+      case 270:
+        return "landscape-right";
+      default:
+        return "unknown";
     }
   }
 }
