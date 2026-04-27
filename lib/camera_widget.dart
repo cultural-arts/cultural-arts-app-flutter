@@ -7,6 +7,7 @@ import 'package:cultural_arts/upload_widget.dart';
 import 'package:cultural_arts/utils/web_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
+import 'package:sensors_plus/sensors_plus.dart';
 import 'dart:math' as math; // Import the math library
 
 // A screen that allows users to take a picture using a given camera.
@@ -22,13 +23,42 @@ class TakePictureScreenState extends State<TakePictureScreen> {
   late Future<void>? _initializeControllerFuture;
   late List<CameraDescription> _cameras; // Add this line
   late Orientation _currentOrientation; // Track current orientation
+  StreamSubscription<AccelerometerEvent>? _accelerometerSubscription;
+  double _deviceRotation = 0; // Device rotation in degrees
 
   @override
   void initState() {
     super.initState();
     _initializeControllerFuture = null;
-    _currentOrientation = MediaQuery.of(context).orientation;
+    _currentOrientation = Orientation.portrait; // Default to portrait
+    _startOrientationDetection();
     _initializeCamera();
+  }
+
+  void _startOrientationDetection() {
+    _accelerometerSubscription = accelerometerEventStream().listen((AccelerometerEvent event) {
+      // Calculate device rotation based on accelerometer data
+      double rotation = math.atan2(event.y, event.x) * (180 / math.pi);
+      
+      // Normalize to 0-360 degrees
+      if (rotation < 0) rotation += 360;
+      
+      // Determine orientation based on rotation
+      Orientation newOrientation;
+      if ((rotation >= 315 && rotation <= 360) || (rotation >= 0 && rotation < 45) || 
+          (rotation >= 135 && rotation < 225)) {
+        newOrientation = Orientation.portrait;
+      } else {
+        newOrientation = Orientation.landscape;
+      }
+      
+      if (newOrientation != _currentOrientation && mounted) {
+        setState(() {
+          _currentOrientation = newOrientation;
+          _deviceRotation = rotation;
+        });
+      }
+    });
   }
 
   Future<void> _initializeCamera() async {
@@ -57,6 +87,7 @@ class TakePictureScreenState extends State<TakePictureScreen> {
   void dispose() {
     // Dispose of the controller when the widget is disposed.
     _controller.dispose();
+    _accelerometerSubscription?.cancel();
     super.dispose();
   }
 
@@ -80,8 +111,9 @@ class TakePictureScreenState extends State<TakePictureScreen> {
             if (snapshot.connectionState == ConnectionState.done) {
               return OrientationBuilder(
                 builder: (context, orientation) {
+                  // Use detected device orientation instead of app orientation
                   return Transform.rotate(
-                    angle: _getCameraAngle(orientation),
+                    angle: _getCameraAngle(_currentOrientation),
                     child: Center(
                       child: AspectRatio(
                         aspectRatio: _controller.value.aspectRatio,
@@ -113,14 +145,14 @@ class TakePictureScreenState extends State<TakePictureScreen> {
 
             if (!mounted) return;
 
-            // Capture the current orientation when the picture is taken
-            Orientation captureOrientation = MediaQuery.of(context).orientation;
+            // Capture the current device rotation when the picture is taken
+            double captureRotation = _deviceRotation;
 
             // Read the image bytes
             Uint8List imageBytes = await acquiredImage.readAsBytes();
             
-            // Rotate the image based on device orientation
-            imageBytes = await _rotateImageByOrientation(imageBytes, captureOrientation);
+            // Rotate the image based on device orientation and camera sensor
+            imageBytes = await _rotateImageByDeviceOrientation(imageBytes, captureRotation);
 
             // If the picture was taken, save it in the local storage to show in the main screen.
             await WebPhotoStorage.savePhoto(imageBytes);
@@ -162,7 +194,7 @@ class TakePictureScreenState extends State<TakePictureScreen> {
     }
   }
 
-  Future<Uint8List> _rotateImageByOrientation(Uint8List imageBytes, Orientation orientation) async {
+  Future<Uint8List> _rotateImageByDeviceOrientation(Uint8List imageBytes, double deviceRotation) async {
     try {
       // Decode the image
       img.Image? image = img.decodeImage(imageBytes);
@@ -171,14 +203,38 @@ class TakePictureScreenState extends State<TakePictureScreen> {
         return imageBytes; // Return original if decode fails
       }
 
-      // Rotate the image based on orientation
-      img.Image rotatedImage;
-      if (orientation == Orientation.landscape) {
-        // Rotate 90 degrees clockwise for landscape
-        rotatedImage = img.copyRotate(image, angle: 90);
+      // Get camera sensor orientation
+      int sensorOrientation = _controller.description.sensorOrientation;
+      
+      // Calculate total rotation needed
+      // Camera sensor orientation + device rotation
+      int totalRotation = (sensorOrientation + deviceRotation.round()) % 360;
+      
+      // Normalize to 0, 90, 180, 270
+      if (totalRotation >= 315 || totalRotation < 45) {
+        totalRotation = 0;
+      } else if (totalRotation >= 45 && totalRotation < 135) {
+        totalRotation = 90;
+      } else if (totalRotation >= 135 && totalRotation < 225) {
+        totalRotation = 180;
       } else {
-        // No rotation needed for portrait
-        rotatedImage = image;
+        totalRotation = 270;
+      }
+
+      // Rotate the image based on calculated rotation
+      img.Image rotatedImage;
+      switch (totalRotation) {
+        case 90:
+          rotatedImage = img.copyRotate(image, angle: 90);
+          break;
+        case 180:
+          rotatedImage = img.copyRotate(image, angle: 180);
+          break;
+        case 270:
+          rotatedImage = img.copyRotate(image, angle: 270);
+          break;
+        default:
+          rotatedImage = image;
       }
 
       // Encode back to bytes
