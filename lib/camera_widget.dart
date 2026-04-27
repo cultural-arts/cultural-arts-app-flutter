@@ -6,7 +6,9 @@ import 'package:camera/camera.dart';
 import 'package:cultural_arts/upload_widget.dart';
 import 'package:cultural_arts/utils/web_storage.dart';
 import 'package:flutter/material.dart';
-import 'dart:math' as math; // Import the math library
+import 'dart:math' as math;
+
+import 'package:flutter/services.dart'; // Import the math library
 
 // A screen that allows users to take a picture using a given camera.
 class TakePictureScreen extends StatefulWidget {
@@ -41,6 +43,11 @@ class TakePictureScreenState extends State<TakePictureScreen> {
 
       // Initialize the controller. This returns a Future.
       _initializeControllerFuture = _controller.initialize();
+
+      // Lock capture orientation after initialization completes
+      _initializeControllerFuture?.then((_) {
+        _controller.lockCaptureOrientation(DeviceOrientation.portraitUp);
+      });
 
       if (mounted) {
         setState(() {});
