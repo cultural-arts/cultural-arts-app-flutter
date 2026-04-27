@@ -27,7 +27,7 @@ jobs:
         run: flutter config --enable-web
 
       - name: Build Web
-        run: flutter build web --release --base-href /contributor/
+        run: flutter build web --release --base-href /contributor/ --dart-define=APP_VERSION=${GITHUB_SHA::7}
 
       - name: Deploy build files via SSH
         run: |
