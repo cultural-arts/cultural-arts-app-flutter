@@ -45,11 +45,11 @@ class TakePictureScreenState extends State<TakePictureScreen> {
       
       // Determine orientation based on rotation
       Orientation newOrientation;
-      if ((rotation >= 315 && rotation <= 360) || (rotation >= 0 && rotation < 45) || 
-          (rotation >= 135 && rotation < 225)) {
-        newOrientation = Orientation.portrait;
-      } else {
+      if ((rotation >= 45 && rotation < 135) || 
+          (rotation >= 225 && rotation < 315)) {
         newOrientation = Orientation.landscape;
+      } else {
+        newOrientation = Orientation.portrait;
       }
       
       if (newOrientation != _currentOrientation && mounted) {
