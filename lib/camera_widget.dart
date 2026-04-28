@@ -8,8 +8,6 @@ import 'package:cultural_arts/utils/web_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:universal_html/html.dart' as html;
 
-import 'package:flutter/services.dart'; // Import the math library
-
 // A screen that allows users to take a picture using a given camera.
 class TakePictureScreen extends StatefulWidget {
   const TakePictureScreen({super.key});
@@ -83,18 +81,34 @@ class TakePictureScreenState extends State<TakePictureScreen> {
           future: _initializeControllerFuture,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.done) {
-              return OrientationBuilder(
-                builder: (context, orientation) {
-                  return Transform.rotate(
-                        angle: _getCameraAngle(orientation),
-                        child: Center(
-                          child: AspectRatio(
-                            aspectRatio: _controller.value.aspectRatio,
-                            child: CameraPreview(_controller),
-                          ),
+              return Stack(
+                fit: StackFit.expand,
+                children: [
+                  // Camera preview - handles its own rotation and aspect ratio
+                  Center(
+                    child: CameraPreview(_controller),
+                  ),
+                  // Orientation text overlay
+                  Positioned(
+                    top: 10,
+                    left: 10,
+                    right: 0,
+                    child: Container(
+                      decoration: const BoxDecoration(
+                        color: Colors.transparent,
+                      ),
+                      child: Text(
+                        getOrientationName(),
+                        style: const TextStyle(
+                          color: Color.fromARGB(255, 0, 0, 0),
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
                         ),
-                  );
-                },
+                        textAlign: TextAlign.left,
+                      ),
+                    ),
+                  ),
+                ],
               );
             } else {
               // Otherwise, display a loading indicator.
@@ -140,23 +154,6 @@ class TakePictureScreenState extends State<TakePictureScreen> {
         child: const Icon(Icons.camera_alt),
       ),
     );
-  }
-
-  double _getCameraAngle(Orientation orientation) {
-    if (_controller.description.lensDirection == CameraLensDirection.front) {
-      return -(_getOrientationAngle(orientation));
-    } else {
-      return _getOrientationAngle(orientation);
-    }
-  }
-
-  double _getOrientationAngle(Orientation orientation) {
-    switch (orientation) {
-      case Orientation.portrait:
-        return 0;
-      case Orientation.landscape:
-        return 0;
-    }
   }
 
   String getOrientationName() {
