@@ -88,8 +88,15 @@ class TakePictureScreenState extends State<TakePictureScreen> {
                 fit: StackFit.expand,
                 children: [
                   // Camera preview - handles its own rotation and aspect ratio
-                  Center(
-                    child: CameraPreview(_controller),
+                  Positioned.fill(
+                    child: FittedBox(
+                      fit: BoxFit.cover,
+                      child: SizedBox(
+                        width: MediaQuery.of(context).size.width,
+                        height: MediaQuery.of(context).size.height,
+                        child: CameraPreview(_controller),
+                      ),
+                    ),
                   ),
                   // Orientation text overlay with live updates
                   StreamBuilder<AccelerometerEvent>(
