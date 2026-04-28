@@ -7,6 +7,7 @@ import 'package:cultural_arts/upload_widget.dart';
 import 'package:cultural_arts/utils/web_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:universal_html/html.dart' as html;
+import 'package:sensors_plus/sensors_plus.dart';
 
 // A screen that allows users to take a picture using a given camera.
 class TakePictureScreen extends StatefulWidget {
@@ -19,12 +20,14 @@ class TakePictureScreen extends StatefulWidget {
 class TakePictureScreenState extends State<TakePictureScreen> {
   late CameraController _controller;
   late Future<void>? _initializeControllerFuture;
-  late List<CameraDescription> _cameras; // Add this line
+  late List<CameraDescription> _cameras;
+  late Stream<AccelerometerEvent> _orientationStream;
 
   @override
   void initState() {
     super.initState();
     _initializeControllerFuture = null;
+    _orientationStream = accelerometerEventStream();
     _initializeCamera();
   }
 
@@ -88,25 +91,31 @@ class TakePictureScreenState extends State<TakePictureScreen> {
                   Center(
                     child: CameraPreview(_controller),
                   ),
-                  // Orientation text overlay
-                  Positioned(
-                    top: 10,
-                    left: 10,
-                    right: 0,
-                    child: Container(
-                      decoration: const BoxDecoration(
-                        color: Colors.transparent,
-                      ),
-                      child: Text(
-                        getOrientationName(),
-                        style: const TextStyle(
-                          color: Color.fromARGB(255, 0, 0, 0),
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                  // Orientation text overlay with live updates
+                  StreamBuilder<AccelerometerEvent>(
+                    stream: _orientationStream,
+                    builder: (context, snapshot) {
+                      print('Orientation: ${snapshot.data?.x} ${snapshot.data?.y} ${snapshot.data?.z}');
+                      return Positioned(
+                        top: 10,
+                        left: 10,
+                        right: 0,
+                        child: Container(
+                          decoration: const BoxDecoration(
+                            color: Colors.transparent,
+                          ),
+                          child: Text(
+                            getOrientationName(),
+                            style: const TextStyle(
+                              color: Color.fromARGB(255, 0, 0, 0),
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.left,
+                          ),
                         ),
-                        textAlign: TextAlign.left,
-                      ),
-                    ),
+                      );
+                    },
                   ),
                 ],
               );
