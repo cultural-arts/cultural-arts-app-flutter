@@ -6,7 +6,6 @@ import 'package:camera/camera.dart';
 import 'package:cultural_arts/upload_widget.dart';
 import 'package:cultural_arts/utils/web_storage.dart';
 import 'package:flutter/material.dart';
-import 'package:universal_html/html.dart' as html;
 import 'package:sensors_plus/sensors_plus.dart';
 
 // A screen that allows users to take a picture using a given camera.
@@ -102,7 +101,7 @@ class TakePictureScreenState extends State<TakePictureScreen> {
                   StreamBuilder<AccelerometerEvent>(
                     stream: _orientationStream,
                     builder: (context, snapshot) {
-                      print('Orientation: ${snapshot.data?.x} ${snapshot.data?.y} ${snapshot.data?.z}');
+                      final orientationText = _orientationFromAccelerometer(snapshot.data);
                       return Positioned(
                         top: 10,
                         left: 10,
@@ -112,7 +111,7 @@ class TakePictureScreenState extends State<TakePictureScreen> {
                             color: Colors.transparent,
                           ),
                           child: Text(
-                            getOrientationName(),
+                            orientationText,
                             style: const TextStyle(
                               color: Color.fromARGB(255, 0, 0, 0),
                               fontSize: 16,
@@ -172,21 +171,19 @@ class TakePictureScreenState extends State<TakePictureScreen> {
     );
   }
 
-  String getOrientationName() {
-    final angle = html.window.screen?.orientation?.angle ?? 0;
-
-    switch (angle) {
-      case 0:
-        return "portrait";
-      case 90:
-        return "landscape-left";
-      case 180:
-        return "portrait-upside-down";
-      case 270:
-        return "landscape-right";
-      default:
-        return "unknown";
+  String _orientationFromAccelerometer(AccelerometerEvent? event) {
+    if (event == null) {
+      return 'unknown';
     }
+
+    final x = event.x;
+    final y = event.y;
+
+    if (x.abs() > y.abs()) {
+      return x > 0 ? 'landscape-right' : 'landscape-left';
+    }
+
+    return y > 0 ? 'portrait-upside-down' : 'portrait';
   }
 }
 
