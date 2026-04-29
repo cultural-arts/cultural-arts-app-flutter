@@ -38,8 +38,12 @@ class TakePictureScreenState extends State<TakePictureScreen> {
       _cameras = await availableCameras();
 
       // Initialize the controller with the first camera in the list
-      _controller = CameraController(_cameras.last, ResolutionPreset.medium,
-          enableAudio: false, imageFormatGroup: ImageFormatGroup.jpeg);
+      _controller = CameraController(
+        _cameras.last,
+        ResolutionPreset.high,
+        enableAudio: false,
+        imageFormatGroup: ImageFormatGroup.jpeg
+      );
 
       // Initialize the controller. This returns a Future.
       _initializeControllerFuture = _controller.initialize();
@@ -90,6 +94,7 @@ class TakePictureScreenState extends State<TakePictureScreen> {
                   Positioned.fill(
                     child: FittedBox(
                       fit: BoxFit.cover,
+                      clipBehavior: Clip.hardEdge,
                       child: SizedBox(
                         width: MediaQuery.of(context).size.width,
                         height: MediaQuery.of(context).size.height,
