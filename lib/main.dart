@@ -167,7 +167,6 @@ class _MyHomePageState extends State<MyHomePage> {
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('App Info'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
