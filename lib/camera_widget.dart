@@ -183,7 +183,7 @@ class TakePictureScreenState extends State<TakePictureScreen> {
       return x > 0 ? 'landscape-right' : 'landscape-left';
     }
 
-    return y > 0 ? 'portrait-upside-down' : 'portrait';
+    return y > 0 ?  'portrait' : 'portrait-upside-down';
   }
 }
 
