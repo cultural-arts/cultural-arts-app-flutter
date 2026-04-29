@@ -167,9 +167,14 @@ class _MyHomePageState extends State<MyHomePage> {
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('App environment'),
-        content: const Text(
-          'Environment: $appEnv\nVersion: $appVersion',
+        title: const Text('App Info'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Image.asset('assets/images/official_logo_bw.png', height: 80),
+            const SizedBox(height: 16),
+            const Text('Please disable the screen orientation lock...'),
+          ],
         ),
         actions: [
           TextButton(
