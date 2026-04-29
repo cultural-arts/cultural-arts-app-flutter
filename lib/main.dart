@@ -173,7 +173,7 @@ class _MyHomePageState extends State<MyHomePage> {
           children: [
             Image.asset('assets/images/official_logo_bw.png', height: 80),
             const SizedBox(height: 16),
-            const Text('Please disable the screen orientation lock...'),
+            const Text('Environment: $appEnv\nVersion: $appVersion'),
           ],
         ),
         actions: [

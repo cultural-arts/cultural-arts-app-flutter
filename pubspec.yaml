@@ -72,6 +72,7 @@ flutter:
   assets:
     - assets/images/take_statue_picture.png
     - assets/images/custom_icons_il_santo.png
+    - assets/images/official_logo_bw.png
   #   - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see
