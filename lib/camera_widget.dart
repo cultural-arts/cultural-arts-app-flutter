@@ -84,6 +84,9 @@ class TakePictureScreenState extends State<TakePictureScreen> {
         // Enforce portrait orientation and take up the full screen
         constraints: const BoxConstraints.expand(),
         child: FutureBuilder<void>(
+          // Wait until the controller is initialized before displaying the
+          // camera preview. Use a FutureBuilder to display a loading spinner until the
+          // controller has finished initializing.
           future: _initializeControllerFuture,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.done) {
@@ -94,10 +97,9 @@ class TakePictureScreenState extends State<TakePictureScreen> {
                   Positioned.fill(
                     child: FittedBox(
                       fit: BoxFit.cover,
-                      clipBehavior: Clip.hardEdge,
                       child: SizedBox(
-                        width: MediaQuery.of(context).size.width,
-                        height: MediaQuery.of(context).size.height,
+                        width: _controller.value.previewSize!.width,
+                        height: _controller.value.previewSize!.height,
                         child: CameraPreview(_controller),
                       ),
                     ),
