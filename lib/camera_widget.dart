@@ -98,8 +98,8 @@ class TakePictureScreenState extends State<TakePictureScreen> {
                     child: FittedBox(
                       fit: BoxFit.cover,
                       child: SizedBox(
-                        width: _controller.value.previewSize!.width,
-                        height: _controller.value.previewSize!.height,
+                        width: MediaQuery.of(context).size.width,
+                        height: MediaQuery.of(context).size.height,
                         child: CameraPreview(_controller),
                       ),
                     ),
