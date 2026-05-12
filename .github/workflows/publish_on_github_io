@@ -1,0 +1,70 @@
+name: Flutter Web Build & Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Flutter App Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.41.7'
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Enable Web
+        run: flutter config --enable-web
+
+      - name: Build Web
+        run: |
+          flutter build web \
+            --release \
+            --base-href /contributor/ \
+            --dart-define=APP_VERSION=${GITHUB_SHA::7}
+
+      # Configure SSH key for pushing
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+
+      # Clone github.io repo
+      - name: Clone GitHub Pages Repository
+        run: |
+          git clone git@github.com:cultural-arts/cultural-arts.github.io.git pages
+
+      # Copy build into subfolder
+      - name: Copy Build Files
+        run: |
+          rm -rf pages/contributor
+          mkdir -p pages/contributor
+
+          cp -r build/web/* pages/contributor/
+
+      # Commit and push
+      - name: Commit and Push Changes
+        run: |
+          cd pages
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add contributor
+
+          git commit -m "Deploy Flutter web app ${GITHUB_SHA::7}" || echo "No changes to commit"
+
+          git push
