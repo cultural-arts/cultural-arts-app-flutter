@@ -1,4 +1,4 @@
-name: Build and Deploy Flutter Web
+name: Build Flutter Web
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
 
     steps:
@@ -33,29 +33,10 @@ jobs:
             --base-href /contributor/ \
             --dart-define=APP_VERSION=${GITHUB_SHA::7}
 
-      - name: Checkout Astro Pages Repository
-        uses: actions/checkout@v4
-        with:
-          repository: cultural-arts/cultural-arts.github.io
-          token: ${{ secrets.PAGES_REPO_TOKEN }}
-          path: astro-site
-
-      - name: Replace Contributor App
+      - name: Trigger Astro Rebuild
         run: |
-          rm -rf astro-site/contributor
-          mkdir -p astro-site/contributor
-
-          cp -r build/web/* astro-site/contributor/
-
-      - name: Commit and Push
-        run: |
-          cd astro-site
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          git add contributor
-
-          git commit -m "Deploy contributor app ${GITHUB_SHA::7}" || echo "No changes"
-
-          git push
+          curl -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.ASTRO_DISPATCH_TOKEN }}" \
+            https://api.github.com/repos/cultural-arts/cultural-arts.github.io/dispatches \
+            -d '{"event_type":"flutter-update"}'
