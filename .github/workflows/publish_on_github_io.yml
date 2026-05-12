@@ -12,31 +12,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Flutter App
-        uses: actions/checkout@v4
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.41.7'
-
-      - name: Install Dependencies
-        run: flutter pub get
-
-      - name: Enable Flutter Web
-        run: flutter config --enable-web
-
-      - name: Build Flutter Web
-        run: |
-          flutter build web \
-            --release \
-            --base-href /contributor/ \
-            --dart-define=APP_VERSION=${GITHUB_SHA::7}
 
       - name: Trigger Astro Rebuild
         run: |
           curl -X POST \
             -H "Accept: application/vnd.github+json" \
-            -H "Authorization: Bearer ${{ secrets.ASTRO_DISPATCH_TOKEN }}" \
+            -H "Authorization: Bearer ${{ secrets.PAGES_REPO_TOKEN }}" \
             https://api.github.com/repos/cultural-arts/cultural-arts.github.io/dispatches \
             -d '{"event_type":"flutter-update"}'
