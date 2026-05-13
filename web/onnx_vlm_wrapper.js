@@ -59,13 +59,13 @@ class NanoVLMInference {
         this.concat,
         this.lastToken
       ] = await Promise.all([
-        loadModel('https://github.com/cultural-arts/cultural-arts-app-flutter/releases/download/v0.1.0/nanoVLM_vision_tower.onnx', 'Vision Tower'),
-        loadModel('https://github.com/cultural-arts/cultural-arts-app-flutter/releases/download/v0.1.0/nanoVLM_mp.onnx', 'MP'),
-        loadModel('https://github.com/cultural-arts/cultural-arts-app-flutter/releases/download/v0.1.0/nanoVLM_decoder_token_embedding.onnx', 'Token Embedding'),
-        loadModel('https://github.com/cultural-arts/cultural-arts-app-flutter/releases/download/v0.1.0/nanoVLM_decoder_head_int8.onnx', 'Decoder Head [int8]'),
-        loadModel('https://github.com/cultural-arts/cultural-arts-app-flutter/releases/download/v0.1.0/nanoVLM_decoder.onnx', 'Decoder'),
-        loadModel('https://github.com/cultural-arts/cultural-arts-app-flutter/releases/download/v0.1.0/nanoVLM_dynamicconcat.onnx', 'Dynamic Concat'),
-        loadModel('https://github.com/cultural-arts/cultural-arts-app-flutter/releases/download/v0.1.0/nanoVLM_last_token.onnx', 'Last Token')
+        loadModel('https://huggingface.co/cultural-arts/nanoVLM/resolve/main/nanoVLM_vision_tower.onnx', 'Vision Tower'),
+        loadModel('https://huggingface.co/cultural-arts/nanoVLM/resolve/main/nanoVLM_mp.onnx', 'MP'),
+        loadModel('https://huggingface.co/cultural-arts/nanoVLM/resolve/main/nanoVLM_decoder_token_embedding.onnx', 'Token Embedding'),
+        loadModel('https://huggingface.co/cultural-arts/nanoVLM/resolve/main/nanoVLM_decoder_head_int8.onnx', 'Decoder Head [int8]'),
+        loadModel('https://huggingface.co/cultural-arts/nanoVLM/resolve/main/nanoVLM_decoder.onnx', 'Decoder'),
+        loadModel('https://huggingface.co/cultural-arts/nanoVLM/resolve/main/nanoVLM_dynamicconcat.onnx', 'Dynamic Concat'),
+        loadModel('https://huggingface.co/cultural-arts/nanoVLM/resolve/main/nanoVLM_last_token.onnx', 'Last Token')
       ]);
 
       globalThis.updateUILoadingSteps("All models loaded successfully.");
