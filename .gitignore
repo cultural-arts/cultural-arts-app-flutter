@@ -48,3 +48,7 @@ app.*.map.json
 *.onnx
 *.jpg
 *.swift
+
+/windows
+/macos
+/linux
