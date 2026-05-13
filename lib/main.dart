@@ -4,7 +4,6 @@ import 'camera_screen.dart'; // Import the camera screen file
 import 'dart:async';
 import 'onnx_vlm.dart';
 import 'dart:js_interop';
-import 'package:logging/logging.dart';
 
 // final log = Logger('Main');
 

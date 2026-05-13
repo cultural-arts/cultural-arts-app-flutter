@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:js_interop';
-import 'dart:js_interop_unsafe';
 
 import 'package:camera/camera.dart';
 import 'package:cultural_arts/api/art_suggestion_api.dart';
@@ -10,7 +9,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:web/web.dart' as web;
 
 import 'utils/geo_utilities.dart';
 import 'onnx_vlm.dart';
