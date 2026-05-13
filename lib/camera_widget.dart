@@ -1,9 +1,12 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:camera/camera.dart';
 import 'package:cultural_arts/upload_widget.dart';
+import 'package:cultural_arts/utils/web_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:sensors_plus/sensors_plus.dart';
 
 // A screen that allows users to take a picture using a given camera.
 class TakePictureScreen extends StatefulWidget {
@@ -16,12 +19,14 @@ class TakePictureScreen extends StatefulWidget {
 class TakePictureScreenState extends State<TakePictureScreen> {
   late CameraController _controller;
   late Future<void>? _initializeControllerFuture;
-  late List<CameraDescription> _cameras; // Add this line
+  late List<CameraDescription> _cameras;
+  late Stream<AccelerometerEvent> _orientationStream;
 
   @override
   void initState() {
     super.initState();
     _initializeControllerFuture = null;
+    _orientationStream = accelerometerEventStream();
     _initializeCamera();
   }
 
@@ -33,11 +38,21 @@ class TakePictureScreenState extends State<TakePictureScreen> {
       _cameras = await availableCameras();
 
       // Initialize the controller with the first camera in the list
-      _controller = CameraController(_cameras.last, ResolutionPreset.medium,
-          enableAudio: false, imageFormatGroup: ImageFormatGroup.jpeg);
+      _controller = CameraController(
+        _cameras.last,
+        ResolutionPreset.high,
+        enableAudio: false,
+        imageFormatGroup: ImageFormatGroup.jpeg
+      );
 
       // Initialize the controller. This returns a Future.
       _initializeControllerFuture = _controller.initialize();
+
+      // Lock capture orientation after initialization completes
+      // _initializeControllerFuture?.then((_) {
+        // Allows to make the camera fullscreen, do not solve the image orientation error when device rotates
+        // _controller.lockCaptureOrientation(DeviceOrientation.portraitUp);
+      // });
 
       if (mounted) {
         setState(() {});
@@ -69,21 +84,53 @@ class TakePictureScreenState extends State<TakePictureScreen> {
         // Enforce portrait orientation and take up the full screen
         constraints: const BoxConstraints.expand(),
         child: FutureBuilder<void>(
+          // Wait until the controller is initialized before displaying the
+          // camera preview. Use a FutureBuilder to display a loading spinner until the
+          // controller has finished initializing.
           future: _initializeControllerFuture,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.done) {
-              return OrientationBuilder(
-                builder: (context, orientation) {
-                  return Transform.rotate(
-                    angle: _getCameraAngle(orientation),
-                    child: Center(
-                      child: AspectRatio(
-                        aspectRatio: _controller.value.aspectRatio,
+              return Stack(
+                fit: StackFit.expand,
+                children: [
+                  // Camera preview - handles its own rotation and aspect ratio
+                  Positioned.fill(
+                    child: FittedBox(
+                      fit: BoxFit.cover,
+                      child: SizedBox(
+                        width: MediaQuery.of(context).size.width,
+                        height: MediaQuery.of(context).size.height,
                         child: CameraPreview(_controller),
                       ),
                     ),
-                  );
-                },
+                  ),
+                  // Orientation text overlay with live updates
+                  StreamBuilder<AccelerometerEvent>(
+                    stream: _orientationStream,
+                    builder: (context, snapshot) {
+                      final orientationText = _orientationFromAccelerometer(snapshot.data);
+                      return Positioned(
+                        top: 10,
+                        left: 10,
+                        right: 0,
+                        child: Container(
+                          decoration: const BoxDecoration(
+                            color: Colors.transparent,
+                          ),
+                          child: Text(
+                            orientationText,
+                            style: const TextStyle(
+                              color: Color.fromARGB(255, 0, 0, 0),
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.left,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ],
               );
             } else {
               // Otherwise, display a loading indicator.
@@ -103,17 +150,21 @@ class TakePictureScreenState extends State<TakePictureScreen> {
 
             // Attempt to take a picture and get the file `image`
             // where it was saved.
-            final image = await _controller.takePicture();
+            final acquiredImage = await _controller.takePicture();
 
             if (!mounted) return;
 
-            // If the picture was taken, display it on a new screen.
+            // If the picture was taken, save it in the local storage to show in the main screen.
+            Uint8List imageBytes = await acquiredImage.readAsBytes();
+            await WebPhotoStorage.savePhoto(imageBytes);
+
+            // If the picture was taken, pass it to the upload screen.
             await Navigator.of(context).push(
               MaterialPageRoute(
                 builder: (context) => UploadPhoto(
                   // Pass the automatically generated path to
                   // the DisplayPictureScreen widget.
-                  acquiredImage: image,
+                  acquiredImage: acquiredImage,
                 ),
               ),
             );
@@ -127,21 +178,19 @@ class TakePictureScreenState extends State<TakePictureScreen> {
     );
   }
 
-  double _getCameraAngle(Orientation orientation) {
-    if (_controller.description.lensDirection == CameraLensDirection.front) {
-      return -(_getOrientationAngle(orientation));
-    } else {
-      return _getOrientationAngle(orientation);
+  String _orientationFromAccelerometer(AccelerometerEvent? event) {
+    if (event == null) {
+      return 'unknown';
     }
-  }
 
-  double _getOrientationAngle(Orientation orientation) {
-    switch (orientation) {
-      case Orientation.portrait:
-        return 0;
-      case Orientation.landscape:
-        return 0;
+    final x = event.x;
+    final y = event.y;
+
+    if (x.abs() > y.abs()) {
+      return x > 0 ? 'landscape-right' : 'landscape-left';
     }
+
+    return y > 0 ?  'portrait' : 'portrait-upside-down';
   }
 }
 

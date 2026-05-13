@@ -143,18 +143,18 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
     base64Image = base64Encode(imageBytes);
 
     // add gps location provider with geolocator
-    Position currentPosition = await getPosition();
+    Position currentPosition = await LocationService.getPosition();
     String latitude = currentPosition.latitude.toString();
     String longitude = currentPosition.longitude.toString();
 
-    if (isGPSValidCoordinates(latitude, longitude)) {
+    if (LocationService.isGPSValidCoordinates(latitude, longitude)) {
       exifData["GPSLatitude"] = latitude;
       exifData["GPSLongitude"] = longitude;
     } else {
       exifData["OriginalGPSLatitude"] = latitude;
       exifData["OriginalGPSLongitude"] = longitude;
-      exifData["GPSLatitude"] = dafaultLatitude;
-      exifData["GPSLongitude"] = defaultLongitude;
+      exifData["GPSLatitude"] = LocationConfig.defaultLatitude.toString();
+      exifData["GPSLongitude"] = LocationConfig.defaultLongitude.toString();
     }
 
     final formattedExifData = formatMapToString(exifData);

@@ -1,35 +1,37 @@
+import 'package:cultural_arts/utils/geo_utilities.dart';
+import 'package:cultural_arts/utils/web_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'camera_screen.dart'; // Import the camera screen file
 import 'dart:async';
 import 'onnx_vlm.dart';
 import 'dart:js_interop';
+import 'package:hive_flutter/hive_flutter.dart';
 
 // final log = Logger('Main');
 
-void main() {
+void main() async {
+  // hive stuff
+  WidgetsFlutterBinding.ensureInitialized();
+  await Hive.initFlutter();
+  await Hive.openBox('photos');
+
+  // main app
   runApp(const MyApp());
 }
 
-Future<LocationPermission> initPosition() async {
-  bool serviceEnabled;
-  LocationPermission permission;
+/// ---------------------------
+/// CONFIG
+/// ---------------------------
 
-  // Check if location services are enabled
-  serviceEnabled = await Geolocator.isLocationServiceEnabled();
-  if (!serviceEnabled) {
-    return LocationPermission.unableToDetermine;
-  }
+const bool useFakeLocation = kDebugMode;
+const String appVersion = String.fromEnvironment('APP_VERSION', defaultValue: 'unknown');
+const String appEnv = String.fromEnvironment('APP_ENV', defaultValue: kReleaseMode ? 'production' : 'development');
 
-  // Request location permission
-  permission = await Geolocator.checkPermission();
-  if (permission == LocationPermission.denied ||
-      permission == LocationPermission.deniedForever) {
-    return await Geolocator.requestPermission();
-  }
-
-  return permission;
-}
+/// ---------------------------
+/// APP
+/// ---------------------------
 
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
@@ -44,15 +46,7 @@ class _MyAppState extends State<MyApp> {
 
   // Initialize a variable to track whether location data has been loaded
   late Future<bool> vlmLoadingFuture;
-  late LocationPermission locationDataState = LocationPermission.unableToDetermine;
-
-  void updateLocationDataState() {
-    initPosition().then((value) {
-      setState(() {
-        locationDataState = value;
-      });
-    });
-  }
+  late LocationPermission permission = LocationPermission.unableToDetermine;
 
   @override
   void initState() {
@@ -60,7 +54,14 @@ class _MyAppState extends State<MyApp> {
     // Call initPosition() asynchronously and wait for it to complete
     updateUILoadingSteps = updateLoadingSteps.toJS;
     vlmLoadingFuture = loadNanoVLM().toDart as Future<bool>;
-    updateLocationDataState();
+    _init();
+  }
+
+  Future<void> _init() async {
+    final result = await LocationService.checkPermission();
+    setState(() {
+      permission = result;
+    });
   }
 
   void updateLoadingSteps(JSString text){
@@ -70,7 +71,7 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'cultural-arts.com app',
+      title: 'cultural-arts.com',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: const Color.fromRGBO(41, 182, 246, 1)),
         useMaterial3: true,
@@ -79,12 +80,14 @@ class _MyAppState extends State<MyApp> {
         future: vlmLoadingFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return LoadingScreen(notifier: loadingMessageNotifier); // Show spinner while VLM loads
+            // Show spinner while VLM loads
+            return LoadingScreen(notifier: loadingMessageNotifier); 
           } else if (snapshot.hasError || snapshot.data == false) {
-            return const ErrorScreen(); // Show error if loading fails
+            // Show error if loading fails
+            return const ErrorScreen(); 
           }
-          // Once VLM is loaded, check location permissions
-          return _buildHomeWidget(locationDataState, updateLocationDataState);
+          // Check location permission
+          return _buildHomeWidget(permission, _init);
         },
       ),
     );
@@ -102,58 +105,59 @@ class ErrorScreen extends StatelessWidget {
   }
 }
 
-Widget _buildHomeWidget(LocationPermission locationDataState, void Function() askForLocationsPermission) {
+Widget _buildHomeWidget(LocationPermission permission, void Function() askForLocationsPermission) {
 
   final loadingMessageNotifier = ValueNotifier<String>("You can't deny basic serives as camera or internet connections by using this app...");
 
-  switch (locationDataState) {
+  switch (permission) {
     case LocationPermission.whileInUse:
       return const MyHomePage(title: 'cultural-arts.com');
     case LocationPermission.always:
       return const MyHomePage(title: 'cultural-arts.com');
     case LocationPermission.denied:
-      return LocationPermissionWidget(
-        onPermissionRequested: () {
-          askForLocationsPermission();
-        },
-      );
+      return LocationPermissionWidget(onRetry: askForLocationsPermission);
     case LocationPermission.deniedForever:
-      return LocationPermissionWidget(
-        onPermissionRequested: () {
-          askForLocationsPermission();
-        },
-      );
+      return LocationPermissionWidget(onRetry: askForLocationsPermission);
     default:
       return LoadingScreen(notifier: loadingMessageNotifier);
   }
 }
 
-class LocationPermissionWidget extends StatelessWidget {
-  final VoidCallback onPermissionRequested;
+/// ---------------------------
+/// UI WIDGETS
+/// ---------------------------
 
-  const LocationPermissionWidget(
-      {super.key, required this.onPermissionRequested});
+class LocationPermissionWidget extends StatelessWidget {
+  final VoidCallback onRetry;
+
+  const LocationPermissionWidget({
+    super.key,
+    required this.onRetry,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: <Widget>[
-        const Text(
-          'To use this app, we need your location permission.',
-          textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 18),
+    return Scaffold(
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Location permission is required to use this app.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 18),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: onRetry,
+                child: const Text('Retry permission'),
+              ),
+            ],
+          ),
         ),
-        const SizedBox(height: 20),
-        ElevatedButton(
-          onPressed: () {
-            // Call the provided callback to request location permission
-            onPermissionRequested();
-          },
-          child: const Text('Grant Location Permission'),
-        ),
-      ],
+      ),
     );
   }
 }
@@ -189,72 +193,184 @@ class LoadingScreen extends StatelessWidget {
 
 
 class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
   final String title;
+
+  const MyHomePage({super.key, required this.title});
 
   @override
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  bool enableTakePicture = false;
-
-  void _enableCameraPreview() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method
-      enableTakePicture = true;
-    });
-  }
+  Position? position;
 
   @override
   void initState() {
     super.initState();
+    _loadPosition();
+  }
+
+  Future<void> _loadPosition() async {
+    final pos = await LocationService.getPosition();
+    setState(() {
+      position = pos;
+    });
+  }
+
+  void _showVersionDialog() {
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Image.asset('assets/images/official_logo_bw.png', height: 80),
+            const SizedBox(height: 16),
+            const Text('Environment: $appEnv\nVersion: $appVersion'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called
+    final photos = WebPhotoStorage.getPhotos();
+
     return Scaffold(
       appBar: AppBar(
+        title: GestureDetector(
+          onTap: _showVersionDialog,
+          child: Text(widget.title),
+        ),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Text(widget.title),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.delete_forever),
+            onPressed: () async {
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text("Delete all photos?"),
+                  content: const Text(
+                    "This will permanently remove all stored images.",
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text("Cancel"),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      child: const Text("Delete"),
+                    ),
+                  ],
+                ),
+              );
+
+              if (confirm == true) {
+                await WebPhotoStorage.clear();
+                setState(() {});
+              }
+            },
+          ),
+        ],
       ),
-      body: Container(
-        decoration: const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage('assets/images/take_statue_picture.png'),
-            fit: BoxFit.cover, // You can adjust the fit as needed
-          ),
-        ),
-        child: GridView.builder(
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-          ),
-          itemCount: 0,
-          itemBuilder: (BuildContext context, int index) {
-            return Card(
-              child: Center(
-                child: Text('Item $index'),
+
+      body: Stack(
+        children: [
+          // ----------------------------
+          // BACKGROUND / EMPTY STATE
+          // ----------------------------
+          Container(
+            decoration: const BoxDecoration(
+              image: DecorationImage(
+                image: AssetImage('assets/images/take_statue_picture.png'),
+                fit: BoxFit.cover,
               ),
-            );
-          },
-        ),
+            ),
+          ),
+
+          // ----------------------------
+          // DEV MODE INDICATOR
+          // ----------------------------
+          if (useFakeLocation)
+            const Positioned(
+              top: 40,
+              left: 20,
+              child: Chip(
+                label: Text("DEV MODE - FAKE LOCATION"),
+              ),
+            ),
+
+          // ----------------------------
+          // PHOTO GRID (IF EXISTS)
+          // ----------------------------
+          if (photos.isNotEmpty)
+            Positioned.fill(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: GridView.builder(
+                  itemCount: photos.length,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                    crossAxisSpacing: 8,
+                    mainAxisSpacing: 8,
+                  ),
+                  itemBuilder: (context, index) {
+                    return ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.memory(
+                        photos[index],
+                        fit: BoxFit.cover,
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+
+          // ----------------------------
+          // EMPTY STATE MESSAGE
+          // ----------------------------
+          if (photos.isEmpty)
+            const Center(
+              child: Text(
+                "No photos yet.\nStart capturing cultural heritage!",
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Color.fromARGB(255, 0, 0, 0),
+                  fontSize: 20,
+                  fontFamily: 'Roboto',
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+        ],
       ),
+
+      // ----------------------------
+      // ALWAYS VISIBLE CAMERA BUTTON
+      // ----------------------------
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
+        onPressed: () async {
+          await Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) =>
-                  const CameraScreen(), // Navigate to CameraScreen
+              builder: (_) => const CameraScreen(),
             ),
           );
+
+          setState(() {}); // refresh
         },
-        tooltip: 'Take picture',
         child: const Icon(Icons.add_a_photo),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+      ),
     );
   }
 }
