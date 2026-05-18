@@ -2,7 +2,7 @@ class CommunicationDriver {
   static const String requestKey = "REQUEST_CODE";
   static const String responseKey = "RESPONSE_CODE";
 
-  static const String baseURL = "https://www.cultural-arts.com/pedrocchi";
+  static const String baseURL = "https://pedrocchi.cultural-arts.com";
 
   // Output messages
   static const int requestMatch = 100;
