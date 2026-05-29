@@ -1,10 +1,7 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
-
 import 'package:camera/camera.dart';
 import 'package:cultural_arts/upload_widget.dart';
-import 'package:cultural_arts/utils/web_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 

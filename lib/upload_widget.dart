@@ -28,6 +28,7 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
   // variables to store state data
   bool photoUploadedToCloud = false;
   int uploadAttempts = 3;
+  bool _uploadStarted = false;
   String base64Image = ''; // the base64 image version
   Map<String, String> exifData = {}; // the exif data container
 
@@ -45,7 +46,7 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
     // in fact the documentation says "callback after the last frame..."
     SchedulerBinding.instance.addPostFrameCallback((timeStamp) {
       try {
-        uploadPhoto(context);
+        if (!_uploadStarted) { _uploadStarted = true; uploadPhoto(context); }
       } on PlatformException catch (e) {
         myDialogBuilder(context, "Error 01", "$e", Icons.error);
       }
@@ -100,10 +101,6 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
     /// ---------------------------
     /// BUILD DATA
     /// ---------------------------
-    
-    // If the picture was taken, save it in the local storage to show in the main screen.
-    // Uint8List imageBytes = await acquiredImage.readAsBytes();
-    // await WebPhotoStorage.savePhoto(imageBytes);
 
     // encode image as base64
     Uint8List imageBytes = await acquiredImage.readAsBytes();
@@ -142,45 +139,49 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
     /// ---------------------------
     /// API CALL
     /// ---------------------------
+    
+    if (WebSettingsStorage.getOfflineMode()) {
+      Navigator.of(context).pop();
+    } else {
+      var artSuggestionsAPI = ArtSuggestionsAPI(baseUrl: CommunicationDriver.baseURL);
+      final response = await artSuggestionsAPI.searchPerfectMatch(base64Image, formattedExifData);
 
-    var artSuggestionsAPI = ArtSuggestionsAPI(baseUrl: CommunicationDriver.baseURL);
-
-    final response = await artSuggestionsAPI.searchPerfectMatch(base64Image, formattedExifData);
-
-    switch (response.statusCode) {
-      case 200:
-        break;
-      case CommunicationDriver.http230CulturalArtsServerUnderMaintenance:
-        myDialogBuilder(
-          context, 
-          "Server Error", 
-          "The server is currently undergoing maintenance.", 
-          Icons.warning
-        );
-        break;
-      case CommunicationDriver.http227CulturalArtsFoundPerfectMatch:
-        final perfectMatch = ArtSuggestions.fromJson(jsonDecode(response.body));
-        // Navigate to the presentation activity with perfectMatch
-        break;
-      case CommunicationDriver.http228CulturalArtsFoundFirstStrikeSuggestions:
-        break;
-      case CommunicationDriver.http229CulturalArtsFoundSecondStrikeSuggestions:
-        break;
-      case CommunicationDriver.http231CulturalArtsNoResultsFound:
-        myDialogBuilder(
-          context, 
-          "Nothing Found in Our Archive",
-          "Thank you for contributing. Your support helps us discover and preserve cultural heritage.",
-          Icons.warning
-        );
-        break;
-      case CommunicationDriver.http452CulturalArtsInvalidImg:
-        break;
-      case CommunicationDriver.http453CulturalArtsInvalidGpsCoordinates:
-        break;
-      case CommunicationDriver.http454CulturalArtsInappropriateContent:
-        break;
+      switch (response.statusCode) {
+        case 200:
+          break;
+        case CommunicationDriver.http230CulturalArtsServerUnderMaintenance:
+          myDialogBuilder(
+            context, 
+            "Server Error", 
+            "The server is currently undergoing maintenance.", 
+            Icons.warning
+          );
+          break;
+        case CommunicationDriver.http227CulturalArtsFoundPerfectMatch:
+          final perfectMatch = ArtSuggestions.fromJson(jsonDecode(response.body));
+          // Navigate to the presentation activity with perfectMatch
+          break;
+        case CommunicationDriver.http228CulturalArtsFoundFirstStrikeSuggestions:
+          break;
+        case CommunicationDriver.http229CulturalArtsFoundSecondStrikeSuggestions:
+          break;
+        case CommunicationDriver.http231CulturalArtsNoResultsFound:
+          myDialogBuilder(
+            context, 
+            "Nothing Found in Our Archive",
+            "Thank you for contributing. Your support helps us discover and preserve cultural heritage.",
+            Icons.warning
+          );
+          break;
+        case CommunicationDriver.http452CulturalArtsInvalidImg:
+          break;
+        case CommunicationDriver.http453CulturalArtsInvalidGpsCoordinates:
+          break;
+        case CommunicationDriver.http454CulturalArtsInappropriateContent:
+          break;
+      }
     }
+
   }
 
   void myDialogBuilder(BuildContext context, String title, String msg, IconData iconData) {
