@@ -4,6 +4,7 @@ import 'package:camera/camera.dart';
 import 'package:cultural_arts/api/art_suggestion_api.dart';
 import 'package:cultural_arts/api/classes/art_suggestions.dart';
 import 'package:cultural_arts/api/communication_driver.dart';
+import 'package:cultural_arts/utils/web_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
@@ -27,7 +28,7 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
   // variables to store state data
   bool photoUploadedToCloud = false;
   int uploadAttempts = 3;
-  String? base64Image; // the base64 image version
+  String base64Image = ''; // the base64 image version
   Map<String, String> exifData = {}; // the exif data container
 
   @override
@@ -96,6 +97,14 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
   void uploadPhoto(context) async {
     uploadAttempts--;
 
+    /// ---------------------------
+    /// BUILD DATA
+    /// ---------------------------
+    
+    // If the picture was taken, save it in the local storage to show in the main screen.
+    // Uint8List imageBytes = await acquiredImage.readAsBytes();
+    // await WebPhotoStorage.savePhoto(imageBytes);
+
     // encode image as base64
     Uint8List imageBytes = await acquiredImage.readAsBytes();
 
@@ -124,11 +133,19 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
 
     final formattedExifData = formatMapToString(exifData);
 
-    var artSuggestionsAPI =
-        ArtSuggestionsAPI(baseUrl: CommunicationDriver.baseURL);
+    /// ---------------------------
+    /// SAVE DATA
+    /// ---------------------------
 
-    final response = await artSuggestionsAPI.searchPerfectMatch(
-        base64Image!, formattedExifData);
+    WebPhotoStorage.savePhoto(StorageContainer(imageBytes: imageBytes, base64Image: base64Image, exifData: exifData));
+
+    /// ---------------------------
+    /// API CALL
+    /// ---------------------------
+
+    var artSuggestionsAPI = ArtSuggestionsAPI(baseUrl: CommunicationDriver.baseURL);
+
+    final response = await artSuggestionsAPI.searchPerfectMatch(base64Image, formattedExifData);
 
     switch (response.statusCode) {
       case 200:

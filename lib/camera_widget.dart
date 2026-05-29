@@ -154,10 +154,6 @@ class TakePictureScreenState extends State<TakePictureScreen> {
 
             if (!mounted) return;
 
-            // If the picture was taken, save it in the local storage to show in the main screen.
-            Uint8List imageBytes = await acquiredImage.readAsBytes();
-            await WebPhotoStorage.savePhoto(imageBytes);
-
             // If the picture was taken, pass it to the upload screen.
             await Navigator.of(context).push(
               MaterialPageRoute(

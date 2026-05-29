@@ -273,7 +273,7 @@ class _MyHomePageState extends State<MyHomePage> {
                     return ClipRRect(
                       borderRadius: BorderRadius.circular(8),
                       child: Image.memory(
-                        photos[index],
+                        photos[index].imageBytes,
                         fit: BoxFit.cover,
                       ),
                     );
