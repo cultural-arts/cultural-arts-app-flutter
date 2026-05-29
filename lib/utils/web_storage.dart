@@ -10,7 +10,8 @@ class WebPhotoStorage {
     final value = {
       'imageBytes': container.imageBytes,
       'base64Image': container.base64Image,
-      'exifData': container.exifData,
+      'formattedExifData': container.formattedExifData,
+      'isUploaded': container.isUploaded
     };
     await _box.put(key, value);
   }
@@ -26,11 +27,16 @@ class WebPhotoStorage {
 
       String base64Image = map['base64Image'] as String? ?? '';
 
-      Map<String, String> exifData = Map<String, String>.from(
-        map['exifData'] as Map? ?? {},
-      );
+      String formattedExifData = map['formattedExifData'] as String? ?? '';
 
-      final container = StorageContainer(imageBytes: imageBytes, base64Image: base64Image, exifData: exifData);
+      bool isUploaded = map['isUploaded'] as bool? ?? false;
+
+      final container = StorageContainer(
+        imageBytes: imageBytes,
+        base64Image: base64Image,
+        formattedExifData: formattedExifData,
+        isUploaded: isUploaded
+      );
       
       return container;
     }).toList();
@@ -45,12 +51,14 @@ class WebPhotoStorage {
 class StorageContainer {
   Uint8List imageBytes = Uint8List(0);
   String base64Image = "";
-  Map<String, String> exifData = {};
+  String formattedExifData = "";
+  bool isUploaded = false;
 
   StorageContainer({
     required this.imageBytes,
     required this.base64Image,
-    required this.exifData,
+    required this.formattedExifData,
+    required this.isUploaded
   });
 
 }

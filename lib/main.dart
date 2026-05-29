@@ -1,3 +1,5 @@
+import 'package:cultural_arts/settings_panel.dart';
+import 'package:cultural_arts/upload_photo_screen.dart';
 import 'package:cultural_arts/utils/geo_utilities.dart';
 import 'package:cultural_arts/utils/web_storage.dart';
 import 'package:flutter/material.dart';
@@ -7,12 +9,9 @@ import 'camera_screen.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 void main() async {
-  // hive stuff
   WidgetsFlutterBinding.ensureInitialized();
   await Hive.initFlutter();
   await Hive.openBox('photos');
-
-  // main app
   runApp(const MyApp());
 }
 
@@ -21,8 +20,10 @@ void main() async {
 /// ---------------------------
 
 const bool useFakeLocation = kDebugMode;
-const String appVersion = String.fromEnvironment('APP_VERSION', defaultValue: 'unknown');
-const String appEnv = String.fromEnvironment('APP_ENV', defaultValue: kReleaseMode ? 'production' : 'development');
+const String appVersion =
+    String.fromEnvironment('APP_VERSION', defaultValue: 'unknown');
+const String appEnv = String.fromEnvironment('APP_ENV',
+    defaultValue: kReleaseMode ? 'production' : 'development');
 
 /// ---------------------------
 /// APP
@@ -46,9 +47,7 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> _init() async {
     final result = await LocationService.checkPermission();
-    setState(() {
-      permission = result;
-    });
+    setState(() => permission = result);
   }
 
   @override
@@ -70,14 +69,12 @@ class _MyAppState extends State<MyApp> {
       case LocationPermission.whileInUse:
       case LocationPermission.always:
         return const MyHomePage(title: 'cultural-arts.com');
-
       case LocationPermission.denied:
       case LocationPermission.deniedForever:
         if (useFakeLocation) {
           return const MyHomePage(title: 'cultural-arts.com (DEV MODE)');
         }
         return LocationPermissionWidget(onRetry: _init);
-
       default:
         return const LoadingScreen();
     }
@@ -85,16 +82,12 @@ class _MyAppState extends State<MyApp> {
 }
 
 /// ---------------------------
-/// UI WIDGETS
+/// UI WIDGETS (unchanged)
 /// ---------------------------
 
 class LocationPermissionWidget extends StatelessWidget {
   final VoidCallback onRetry;
-
-  const LocationPermissionWidget({
-    super.key,
-    required this.onRetry,
-  });
+  const LocationPermissionWidget({super.key, required this.onRetry});
 
   @override
   Widget build(BuildContext context) {
@@ -105,16 +98,13 @@ class LocationPermissionWidget extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
-                'Location permission is required to use this app.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 18),
-              ),
+              const Text('Location permission is required to use this app.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 18)),
               const SizedBox(height: 20),
               ElevatedButton(
-                onPressed: onRetry,
-                child: const Text('Retry permission'),
-              ),
+                  onPressed: onRetry,
+                  child: const Text('Retry permission')),
             ],
           ),
         ),
@@ -129,8 +119,7 @@ class LoadingScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Scaffold(
-      body: Center(child: CircularProgressIndicator()),
-    );
+        body: Center(child: CircularProgressIndicator()));
   }
 }
 
@@ -140,7 +129,6 @@ class LoadingScreen extends StatelessWidget {
 
 class MyHomePage extends StatefulWidget {
   final String title;
-
   const MyHomePage({super.key, required this.title});
 
   @override
@@ -158,9 +146,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<void> _loadPosition() async {
     final pos = await LocationService.getPosition();
-    setState(() {
-      position = pos;
-    });
+    setState(() => position = pos);
   }
 
   void _showVersionDialog() {
@@ -177,12 +163,36 @@ class _MyHomePageState extends State<MyHomePage> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close')),
         ],
       ),
     );
+  }
+
+  // NEW ─ Settings bottom sheet
+  void _showSettingsPanel() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SettingsPanel(onChanged: () => setState(() {})),
+    );
+  }
+
+  // NEW ─ Pick local photos and push UploadLocalPhotosScreen
+  Future<void> _pickAndUploadLocalPhotos() async {
+    final List<StorageContainer> photos = WebPhotoStorage.getPhotos();
+    if (!photos.isNotEmpty) return;
+    if (!mounted) return;
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => UploadLocalPhotosScreen(),
+      ),
+    );
+    setState(() {}); // refresh grid after upload
   }
 
   @override
@@ -197,43 +207,23 @@ class _MyHomePageState extends State<MyHomePage> {
         ),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
+          // NEW ─ Upload local photos button
           IconButton(
-            icon: const Icon(Icons.delete_forever),
-            onPressed: () async {
-              final confirm = await showDialog<bool>(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text("Delete all photos?"),
-                  content: const Text(
-                    "This will permanently remove all stored images.",
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context, false),
-                      child: const Text("Cancel"),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.pop(context, true),
-                      child: const Text("Delete"),
-                    ),
-                  ],
-                ),
-              );
-
-              if (confirm == true) {
-                await WebPhotoStorage.clear();
-                setState(() {});
-              }
-            },
+            icon: const Icon(Icons.upload),
+            tooltip: 'Upload local photos',
+            onPressed: _pickAndUploadLocalPhotos,
+          ),
+          // CHANGED ─ Was delete, now opens settings panel
+          IconButton(
+            icon: const Icon(Icons.settings),
+            tooltip: 'Settings',
+            onPressed: _showSettingsPanel,
           ),
         ],
       ),
 
       body: Stack(
         children: [
-          // ----------------------------
-          // BACKGROUND / EMPTY STATE
-          // ----------------------------
           Container(
             decoration: const BoxDecoration(
               image: DecorationImage(
@@ -242,49 +232,32 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
             ),
           ),
-
-          // ----------------------------
-          // DEV MODE INDICATOR
-          // ----------------------------
           if (useFakeLocation)
             const Positioned(
               top: 40,
               left: 20,
-              child: Chip(
-                label: Text("DEV MODE - FAKE LOCATION"),
-              ),
+              child: Chip(label: Text("DEV MODE - FAKE LOCATION")),
             ),
-
-          // ----------------------------
-          // PHOTO GRID (IF EXISTS)
-          // ----------------------------
           if (photos.isNotEmpty)
             Positioned.fill(
               child: Padding(
                 padding: const EdgeInsets.all(12),
                 child: GridView.builder(
                   itemCount: photos.length,
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  gridDelegate:
+                      const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 3,
                     crossAxisSpacing: 8,
                     mainAxisSpacing: 8,
                   ),
-                  itemBuilder: (context, index) {
-                    return ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.memory(
-                        photos[index].imageBytes,
-                        fit: BoxFit.cover,
-                      ),
-                    );
-                  },
+                  itemBuilder: (context, index) => ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.memory(photos[index].imageBytes,
+                        fit: BoxFit.cover),
+                  ),
                 ),
               ),
             ),
-
-          // ----------------------------
-          // EMPTY STATE MESSAGE
-          // ----------------------------
           if (photos.isEmpty)
             const Center(
               child: Text(
@@ -301,19 +274,11 @@ class _MyHomePageState extends State<MyHomePage> {
         ],
       ),
 
-      // ----------------------------
-      // ALWAYS VISIBLE CAMERA BUTTON
-      // ----------------------------
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => const CameraScreen(),
-            ),
-          );
-
-          setState(() {}); // refresh
+          await Navigator.push(context,
+              MaterialPageRoute(builder: (_) => const CameraScreen()));
+          setState(() {});
         },
         child: const Icon(Icons.add_a_photo),
       ),

@@ -134,7 +134,12 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
     /// SAVE DATA
     /// ---------------------------
 
-    WebPhotoStorage.savePhoto(StorageContainer(imageBytes: imageBytes, base64Image: base64Image, exifData: exifData));
+    WebPhotoStorage.savePhoto(StorageContainer(
+      imageBytes: imageBytes,
+      base64Image: base64Image,
+      formattedExifData: formattedExifData,
+      isUploaded: false
+    ));
 
     /// ---------------------------
     /// API CALL
@@ -142,12 +147,21 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
     
     if (WebSettingsStorage.getOfflineMode()) {
 
+      /// ---------------------------
+      /// OFFLINE MODE`
+      /// ---------------------------
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Saved offline'), duration: Duration(milliseconds: 800)),
       );
       await Future.delayed(const Duration(milliseconds: 800));
       Navigator.of(context).pop();
+
     } else {
+
+      /// ---------------------------
+      /// ONLINE MODE
+      /// ---------------------------
+
       var artSuggestionsAPI = ArtSuggestionsAPI(baseUrl: CommunicationDriver.baseURL);
       final response = await artSuggestionsAPI.searchPerfectMatch(base64Image, formattedExifData);
 
