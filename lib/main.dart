@@ -12,6 +12,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Hive.initFlutter();
   await Hive.openBox('photos');
+  await Hive.openBox('settings');
   runApp(const MyApp());
 }
 
