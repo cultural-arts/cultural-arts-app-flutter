@@ -134,12 +134,17 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
     /// SAVE DATA
     /// ---------------------------
 
-    WebPhotoStorage.savePhoto(StorageContainer(
+    String key = DateTime.now().millisecondsSinceEpoch.toString();
+
+    StorageContainer sg = StorageContainer(
+      key: key,
       imageBytes: imageBytes,
       base64Image: base64Image,
       formattedExifData: formattedExifData,
       isUploaded: false
-    ));
+    );
+
+    WebPhotoStorage.savePhoto(sg);
 
     /// ---------------------------
     /// API CALL
@@ -164,6 +169,9 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
 
       var artSuggestionsAPI = ArtSuggestionsAPI(baseUrl: CommunicationDriver.baseURL);
       final response = await artSuggestionsAPI.searchPerfectMatch(base64Image, formattedExifData);
+
+      sg.isUploaded = true;
+      WebPhotoStorage.savePhoto(sg);
 
       switch (response.statusCode) {
         case 200:
