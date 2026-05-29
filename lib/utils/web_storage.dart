@@ -4,22 +4,28 @@ import 'package:hive/hive.dart';
 class WebPhotoStorage {
   static final _box = Hive.box('photos');
 
-  /// Save a StorageContainer
-  static Future<void> savePhoto(StorageContainer container) async {
-    final key = DateTime.now().millisecondsSinceEpoch.toString();
-    final value = {
+  static Map<String, dynamic> _photoToMap(StorageContainer container) {
+    return {
       'imageBytes': container.imageBytes,
       'base64Image': container.base64Image,
       'formattedExifData': container.formattedExifData,
-      'isUploaded': container.isUploaded
+      'isUploaded': container.isUploaded,
     };
+  }
+
+  /// Save or update a StorageContainer
+  static Future<void> savePhoto(StorageContainer container) async {
+    final key = container.key ?? DateTime.now().millisecondsSinceEpoch.toString();
+    final value = _photoToMap(container);
     await _box.put(key, value);
+    container.key = key;  // why?
   }
 
   /// Get all StorageContainers
   static List<StorageContainer> getPhotos() {
-    return _box.values.map((entry) {
-      final map = Map<String, dynamic>.from(entry as Map);
+    return _box.toMap().entries.map((entry) {
+      final key = entry.key as String;
+      final map = Map<String, dynamic>.from(entry.value as Map);
 
       Uint8List imageBytes = Uint8List.fromList(
         List<int>.from(map['imageBytes'] as List),
@@ -31,14 +37,13 @@ class WebPhotoStorage {
 
       bool isUploaded = map['isUploaded'] as bool? ?? false;
 
-      final container = StorageContainer(
+      return StorageContainer(
+        key: key,
         imageBytes: imageBytes,
         base64Image: base64Image,
         formattedExifData: formattedExifData,
-        isUploaded: isUploaded
+        isUploaded: isUploaded,
       );
-      
-      return container;
     }).toList();
   }
 
@@ -46,19 +51,26 @@ class WebPhotoStorage {
   static Future<void> clear() async {
     await _box.clear();
   }
+
+  /// Count photos that still need upload
+  static int pendingUploadCount() {
+    return getPhotos().where((photo) => !photo.isUploaded).length;
+  }
 }
 
 class StorageContainer {
+  String? key;
   Uint8List imageBytes = Uint8List(0);
   String base64Image = "";
   String formattedExifData = "";
   bool isUploaded = false;
 
   StorageContainer({
+    this.key,
     required this.imageBytes,
     required this.base64Image,
     required this.formattedExifData,
-    required this.isUploaded
+    required this.isUploaded,
   });
 
 }

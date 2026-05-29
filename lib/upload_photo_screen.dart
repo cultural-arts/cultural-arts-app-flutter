@@ -48,6 +48,9 @@ class _UploadLocalPhotosScreenState extends State<UploadLocalPhotosScreen> {
         if (response.statusCode != CommunicationDriver.http231CulturalArtsNoResultsFound) {
           throw Exception('upload failed with status code ${response.statusCode}');
         }
+
+        photos[i].isUploaded = true;
+        await WebPhotoStorage.savePhoto(photos[i]);
       } catch (e) {
         setState(() => _statusMessage = 'Error on image ${i + 1}: $e');
         await Future.delayed(const Duration(seconds: 2));

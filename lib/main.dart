@@ -199,6 +199,7 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
     final photos = WebPhotoStorage.getPhotos();
+    final pendingUploads = photos.where((photo) => !photo.isUploaded).length;
 
     return Scaffold(
       appBar: AppBar(
@@ -208,11 +209,41 @@ class _MyHomePageState extends State<MyHomePage> {
         ),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
-          // NEW ─ Upload local photos button
-          IconButton(
-            icon: const Icon(Icons.upload),
-            tooltip: 'Upload local photos',
-            onPressed: _pickAndUploadLocalPhotos,
+          // NEW ─ Upload local photos button with pending count badge
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.upload),
+                tooltip: 'Upload local photos',
+                onPressed: _pickAndUploadLocalPhotos,
+              ),
+              if (pendingUploads > 0)
+                Positioned(
+                  right: 6,
+                  top: 20,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 11,
+                      minHeight: 11,
+                    ),
+                    child: Text(
+                      '$pendingUploads',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+            ],
           ),
           // CHANGED ─ Was delete, now opens settings panel
           IconButton(
