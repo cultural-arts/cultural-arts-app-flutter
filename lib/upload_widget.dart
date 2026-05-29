@@ -141,6 +141,11 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
     /// ---------------------------
     
     if (WebSettingsStorage.getOfflineMode()) {
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Saved offline'), duration: Duration(milliseconds: 800)),
+      );
+      await Future.delayed(const Duration(milliseconds: 800));
       Navigator.of(context).pop();
     } else {
       var artSuggestionsAPI = ArtSuggestionsAPI(baseUrl: CommunicationDriver.baseURL);
