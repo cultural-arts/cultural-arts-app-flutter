@@ -156,9 +156,9 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
       /// OFFLINE MODE`
       /// ---------------------------
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Saved offline'), duration: Duration(milliseconds: 800)),
+        const SnackBar(content: Text('Saved offline'), duration: Duration(milliseconds: 500)),
       );
-      await Future.delayed(const Duration(milliseconds: 800));
+      await Future.delayed(const Duration(milliseconds: 500));
       Navigator.of(context).pop();
 
     } else {
