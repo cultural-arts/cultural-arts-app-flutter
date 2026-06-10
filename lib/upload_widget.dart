@@ -4,6 +4,7 @@ import 'package:camera/camera.dart';
 import 'package:cultural_arts/api/art_suggestion_api.dart';
 import 'package:cultural_arts/api/classes/art_suggestions.dart';
 import 'package:cultural_arts/api/communication_driver.dart';
+import 'package:cultural_arts/utils/data.dart';
 import 'package:cultural_arts/utils/web_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
@@ -85,16 +86,6 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
     );
   }
 
-  String formatMapToString(Map<String, String> data) {
-    final List<String> keyValuePairs = [];
-
-    data.forEach((key, value) {
-      keyValuePairs.add('$key=$value');
-    });
-
-    return '{${keyValuePairs.join(',')}}';
-  }
-
   void uploadPhoto(context) async {
     uploadAttempts--;
 
@@ -102,33 +93,13 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
     /// BUILD DATA
     /// ---------------------------
 
-    // encode image as base64
+    // image to byte list
     Uint8List imageBytes = await acquiredImage.readAsBytes();
 
-    // obtain image width and height
-    var image = await decodeImageFromList(imageBytes);
-    exifData['ImageLength'] = image.height.toString();
-    exifData['ImageWidth'] = image.width.toString();
-
-    // encode image to send
-    base64Image = base64Encode(imageBytes);
-
-    // add gps location provider with geolocator
-    Position currentPosition = await LocationService.getPosition();
-    String latitude = currentPosition.latitude.toString();
-    String longitude = currentPosition.longitude.toString();
-
-    if (LocationService.isGPSValidCoordinates(latitude, longitude)) {
-      exifData["GPSLatitude"] = latitude;
-      exifData["GPSLongitude"] = longitude;
-    } else {
-      exifData["OriginalGPSLatitude"] = latitude;
-      exifData["OriginalGPSLongitude"] = longitude;
-      exifData["GPSLatitude"] = LocationConfig.defaultLatitude.toString();
-      exifData["GPSLongitude"] = LocationConfig.defaultLongitude.toString();
-    }
-
-    final formattedExifData = formatMapToString(exifData);
+    // image preparation (base64 and exif data)
+    Map<String, String> data = await DataUtilities.photoToWebStorage(imageBytes);
+    String base64Image = data['base64Image']!;
+    String formattedExifData = data['formattedExifData']!;
 
     /// ---------------------------
     /// SAVE DATA

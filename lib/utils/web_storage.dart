@@ -21,6 +21,11 @@ class WebPhotoStorage {
     container.key = key;  // why?
   }
 
+  /// Check if a key exists
+  static bool exists(String key) {
+    return _box.containsKey(key);
+  }
+
   /// Get all StorageContainers
   static List<StorageContainer> getPhotos() {
     return _box.toMap().entries.map((entry) {

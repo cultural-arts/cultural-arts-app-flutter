@@ -1,5 +1,6 @@
 import 'package:cultural_arts/settings_panel.dart';
 import 'package:cultural_arts/upload_photo_screen.dart';
+import 'package:cultural_arts/utils/data.dart';
 import 'package:cultural_arts/utils/geo_utilities.dart';
 import 'package:cultural_arts/utils/web_storage.dart';
 import 'package:flutter/material.dart';
@@ -7,6 +8,7 @@ import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'camera_screen.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:image_picker/image_picker.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,10 +23,8 @@ void main() async {
 /// ---------------------------
 
 const bool useFakeLocation = kDebugMode;
-const String appVersion =
-    String.fromEnvironment('APP_VERSION', defaultValue: 'unknown');
-const String appEnv = String.fromEnvironment('APP_ENV',
-    defaultValue: kReleaseMode ? 'production' : 'development');
+const String appVersion = String.fromEnvironment('APP_VERSION', defaultValue: 'unknown');
+const String appEnv = String.fromEnvironment('APP_ENV', defaultValue: kReleaseMode ? 'production' : 'development');
 
 /// ---------------------------
 /// APP
@@ -203,6 +203,48 @@ class _MyHomePageState extends State<MyHomePage> {
     setState(() {}); // refresh grid after upload
   }
 
+  // Load Photos from gallery
+  Future<void> _chooseAndImportPhotos() async {
+    final picker = ImagePicker();
+    final images = await picker.pickMultiImage();
+    if (images.isEmpty) return;
+
+    for (final image in images) {
+
+      String key = image.name;
+
+      if (WebPhotoStorage.exists(key)) continue;
+      
+      /// ---------------------------
+      /// BUILD DATA
+      /// ---------------------------
+
+      // image to byte list
+      Uint8List imageBytes = await image.readAsBytes();
+
+      // image preparation (base64 and exif data)
+      Map<String, String> data = await DataUtilities.photoToWebStorage(imageBytes);
+      String base64Image = data['base64Image']!;
+      String formattedExifData = data['formattedExifData']!;
+
+      /// ---------------------------
+      /// SAVE DATA
+      /// ---------------------------
+
+      StorageContainer sg = StorageContainer(
+        key: key,
+        imageBytes: imageBytes,
+        base64Image: base64Image,
+        formattedExifData: formattedExifData,
+        isUploaded: false
+      );
+
+      WebPhotoStorage.savePhoto(sg);
+    }
+
+    setState(() {}); // refresh pending count
+  }
+
   @override
   Widget build(BuildContext context) {
     final photos = WebPhotoStorage.getPhotos();
@@ -216,6 +258,11 @@ class _MyHomePageState extends State<MyHomePage> {
         ),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.photo_library_outlined),
+            tooltip: 'Import photos from device',
+            onPressed: _chooseAndImportPhotos,
+          ),
           // NEW ─ Upload local photos button with pending count badge
           GestureDetector(
             onTap: _pickAndUploadLocalPhotos,
@@ -223,7 +270,7 @@ class _MyHomePageState extends State<MyHomePage> {
               clipBehavior: Clip.none,
               children: [
                 IconButton(
-                  icon: const Icon(Icons.upload),
+                  icon: const Icon(Icons.cloud_upload),
                   tooltip: 'Upload local photos',
                   onPressed: _pickAndUploadLocalPhotos,
                 ),
