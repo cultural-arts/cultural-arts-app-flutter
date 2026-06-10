@@ -223,7 +223,7 @@ class _MyHomePageState extends State<MyHomePage> {
       Uint8List imageBytes = await image.readAsBytes();
 
       // image preparation (base64 and exif data)
-      Map<String, String> data = await DataUtilities.photoToWebStorage(imageBytes);
+      Map<String, String> data = await DataUtilities.photoToWebStorage(imageBytes, useCurrentLocation: false);
       String base64Image = data['base64Image']!;
       String formattedExifData = data['formattedExifData']!;
 

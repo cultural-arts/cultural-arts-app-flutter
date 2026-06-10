@@ -33,6 +33,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.2"
+  brotli:
+    dependency: transitive
+    description:
+      name: brotli
+      sha256: "7f891558ed779aab2bed874f0a36b8123f9ff3f19cf6efbee89e18ed294945ae"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.6.0"
   cached_network_image:
     dependency: "direct main"
     description:
@@ -169,6 +177,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.9"
+  exif_reader:
+    dependency: "direct main"
+    description:
+      name: exif_reader
+      sha256: "8491a1733f31b5b0c49d05e3fd2690538f1906b52f156d9d1fe7fad9d76bcced"
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.1.0"
   fake_async:
     dependency: transitive
     description:
@@ -456,6 +472,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.2.2"
+  iso_base_media:
+    dependency: transitive
+    description:
+      name: iso_base_media
+      sha256: "7716f5c57d342e50673cd5b8eaca3e7f7c624145c637602fbe564b8396d50a85"
+      url: "https://pub.dev"
+    source: hosted
+    version: "6.3.2"
   jni:
     dependency: transitive
     description:
@@ -472,6 +496,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.1"
+  jpeg_markers:
+    dependency: transitive
+    description:
+      name: jpeg_markers
+      sha256: "9417cd62862e5e9f38087bb13193623c1be70c477d93c329540f105643716059"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.7.0"
   json_annotation:
     dependency: "direct main"
     description:
@@ -680,6 +712,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.2.0"
+  random_access_source:
+    dependency: transitive
+    description:
+      name: random_access_source
+      sha256: "2cb3578e3027d6f7e44a66ec9bf72f5e0b73e9c0e62f4768977a0ed962d08be7"
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.2.1"
   record_use:
     dependency: transitive
     description:
@@ -765,6 +805,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.10.2"
+  sprintf:
+    dependency: transitive
+    description:
+      name: sprintf
+      sha256: "1fc9ffe69d4df602376b52949af107d8f5703b77cda567c4d7d86a0693120f23"
+      url: "https://pub.dev"
+    source: hosted
+    version: "7.0.0"
   sqflite:
     dependency: transitive
     description:

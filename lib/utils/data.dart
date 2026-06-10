@@ -17,7 +17,9 @@ class DataUtilities {
     return '{${keyValuePairs.join(',')}}';
   }
 
-  static Future<Map<String, String>> photoToWebStorage(Uint8List imageBytes) async {
+  static Future<Map<String, String>> photoToWebStorage(Uint8List imageBytes, {
+    bool useCurrentLocation = true,
+  }) async {
 
     Map<String, String> exifData = {};
     String base64Image = '';
@@ -30,19 +32,29 @@ class DataUtilities {
     // encode image to send
     base64Image = base64Encode(imageBytes);
 
-    // add gps location provider with geolocator
-    Position currentPosition = await LocationService.getPosition();
-    String latitude = currentPosition.latitude.toString();
-    String longitude = currentPosition.longitude.toString();
+    if (useCurrentLocation) {
+      // add gps location provider with geolocator
+      Position currentPosition = await LocationService.getPosition();
+      String latitude = currentPosition.latitude.toString();
+      String longitude = currentPosition.longitude.toString();
 
-    if (LocationService.isGPSValidCoordinates(latitude, longitude)) {
-      exifData["GPSLatitude"] = latitude;
-      exifData["GPSLongitude"] = longitude;
+      if (LocationService.isGPSValidCoordinates(latitude, longitude)) {
+        exifData["GPSLatitude"] = latitude;
+        exifData["GPSLongitude"] = longitude;
+      } else {
+        exifData["OriginalGPSLatitude"] = latitude;
+        exifData["OriginalGPSLongitude"] = longitude;
+        exifData["GPSLatitude"] = LocationConfig.defaultLatitude.toString();
+        exifData["GPSLongitude"] = LocationConfig.defaultLongitude.toString();
+      }
     } else {
-      exifData["OriginalGPSLatitude"] = latitude;
-      exifData["OriginalGPSLongitude"] = longitude;
-      exifData["GPSLatitude"] = LocationConfig.defaultLatitude.toString();
-      exifData["GPSLongitude"] = LocationConfig.defaultLongitude.toString();
+      final gps = await LocationService.extractGpsFromBytes(imageBytes);
+      if (gps.isNotEmpty) {
+        exifData.addAll(gps);
+      } else {
+        exifData["GPSLatitude"] = LocationConfig.defaultLatitude.toString();
+        exifData["GPSLongitude"] = LocationConfig.defaultLongitude.toString();
+      }
     }
 
     final formattedExifData = formatMapToString(exifData);
