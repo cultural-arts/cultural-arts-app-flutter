@@ -1,9 +1,9 @@
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:cultural_arts/utils/geo_utilities.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image/image.dart' as img;
+import 'package:flutter/foundation.dart';
 
 class DataUtilities {
 
@@ -78,6 +78,14 @@ class DataUtilities {
       maintainAspect: true,
     );
     return Uint8List.fromList(img.encodeJpg(resized, quality: quality));
+  }
+
+  static Future<Uint8List> compressImageAsync(Uint8List imageBytes) async {
+    return compute(_compressImageIsolate, imageBytes);
+  }
+
+  static Uint8List _compressImageIsolate(Uint8List imageBytes) {
+    return compressImage(imageBytes);
   }
 
 }
