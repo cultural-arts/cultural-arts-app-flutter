@@ -1,3 +1,4 @@
+import 'package:cultural_arts/import_photo_screen.dart';
 import 'package:cultural_arts/settings_panel.dart';
 import 'package:cultural_arts/upload_photo_screen.dart';
 import 'package:cultural_arts/utils/data.dart';
@@ -211,46 +212,15 @@ class _MyHomePageState extends State<MyHomePage> {
     final images = await picker.pickMultiImage();
     if (images.isEmpty) return;
 
-    setState(() => isImporting = true);
+    if (!mounted) return;
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ImportLocalPhotosScreen(images: images),
+      ),
+    );
+    setState(() {}); // refresh grid after upload
 
-    for (final image in images) {
-
-      String key = image.name;
-
-      if (WebPhotoStorage.exists(key)) continue;
-      
-      /// ---------------------------
-      /// BUILD DATA
-      /// ---------------------------
-
-      // image to byte list
-      Uint8List imageBytes = await image.readAsBytes();
-
-      // image compression
-      final compressed = await DataUtilities.compressImageAsync(imageBytes);
-
-      // image preparation (base64 and exif data)
-      // TODO try to find a way to include the current location (OS removes that data from the image)
-      Map<String, String> data = await DataUtilities.photoToWebStorage(compressed, useCurrentLocation: true);
-      String base64Image = data['base64Image']!;
-      String formattedExifData = data['formattedExifData']!;
-
-      /// ---------------------------
-      /// SAVE DATA
-      /// ---------------------------
-
-      StorageContainer sg = StorageContainer(
-        key: key,
-        imageBytes: imageBytes,
-        base64Image: base64Image,
-        formattedExifData: formattedExifData,
-        isUploaded: false
-      );
-
-      WebPhotoStorage.savePhoto(sg);
-    }
-
-    setState(() => isImporting = false);
   }
 
   @override
@@ -266,21 +236,11 @@ class _MyHomePageState extends State<MyHomePage> {
         ),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
-          if (isImporting)
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 8.0),
-              child: SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-            )
-          else
-            IconButton(
-              icon: const Icon(Icons.photo_library_outlined),
-              tooltip: 'Import photos from device',
-              onPressed: _chooseAndImportPhotos,
-            ),
+          IconButton(
+            icon: const Icon(Icons.photo_library_outlined),
+            tooltip: 'Import photos from device',
+            onPressed: _chooseAndImportPhotos,
+          ),
           // NEW ─ Upload local photos button with pending count badge
           GestureDetector(
             onTap: _pickAndUploadLocalPhotos,
