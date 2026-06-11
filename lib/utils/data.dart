@@ -73,8 +73,8 @@ class DataUtilities {
 
     final resized = img.copyResize(
       decodedImage,
-      width: isPortrait ? 1080 : 1920,
-      height: isPortrait ? 1920 : 1080,
+      width: isPortrait ? 720 : 1280,
+      height: isPortrait ? 1280 : 720,
       maintainAspect: true,
     );
     return Uint8List.fromList(img.encodeJpg(resized, quality: quality));
