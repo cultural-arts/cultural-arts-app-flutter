@@ -3,7 +3,7 @@ import 'dart:typed_data';
 import 'package:cultural_arts/utils/geo_utilities.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
-
+import 'package:image/image.dart' as img;
 
 class DataUtilities {
 
@@ -63,6 +63,21 @@ class DataUtilities {
       'base64Image': base64Image,
       'formattedExifData': formattedExifData
     };
+  }
+
+  static Uint8List compressImage(Uint8List imageBytes, {int quality = 92}) {
+    final decodedImage = img.decodeImage(imageBytes);
+    if (decodedImage == null) return imageBytes;
+    
+    final isPortrait = decodedImage.height > decodedImage.width;
+
+    final resized = img.copyResize(
+      decodedImage,
+      width: isPortrait ? 1080 : 1920,
+      height: isPortrait ? 1920 : 1080,
+      maintainAspect: true,
+    );
+    return Uint8List.fromList(img.encodeJpg(resized, quality: quality));
   }
 
 }
