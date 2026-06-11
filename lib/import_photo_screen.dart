@@ -3,6 +3,7 @@ import 'package:camera/camera.dart';
 import 'package:cultural_arts/utils/data.dart';
 import 'package:cultural_arts/utils/web_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 
 class ImportLocalPhotosScreen extends StatefulWidget {
   const ImportLocalPhotosScreen({super.key, required this.images});
@@ -22,7 +23,9 @@ class _ImportLocalPhotosScreenState extends State<ImportLocalPhotosScreen> {
   @override
   void initState() {
     super.initState();
-    _runImport();
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      _runImport();
+    });
   }
 
   Future<void> _runImport() async {
