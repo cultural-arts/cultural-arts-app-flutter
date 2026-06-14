@@ -29,6 +29,9 @@ class _ImportLocalPhotosScreenState extends State<ImportLocalPhotosScreen> {
   }
 
   Future<void> _runImport() async {
+
+    await Future.delayed(const Duration(seconds: 2));
+
     final images = widget.images;
 
     for (int i = 0; i < images.length; i++) {
@@ -36,7 +39,7 @@ class _ImportLocalPhotosScreenState extends State<ImportLocalPhotosScreen> {
 
       setState(() {
         _current = i;
-        _statusMessage = 'Be patient! Importing ${i + 1} of ${images.length}…';
+        _statusMessage = 'Image import can take up to 30 seconds per image, be patient please! Importing ${i + 1} of ${images.length}…';
       });
 
       try {
