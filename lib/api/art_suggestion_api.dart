@@ -6,22 +6,6 @@ class ArtSuggestionsAPI {
 
   ArtSuggestionsAPI({required this.baseUrl});
 
-  Future<http.Response> searchPerfectMatch(
-      String encodedPhoto, String exif) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/search-perfect-match'),
-      headers: <String, String>{
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: {
-        'encoded_photo': encodedPhoto,
-        'exif': exif,
-      },
-    );
-
-    return response;
-  }
-
   Future<http.Response> searchArtSuggestions(
       String imgId, List<String>? discardedArtList, int type) async {
     final response = await http.post(

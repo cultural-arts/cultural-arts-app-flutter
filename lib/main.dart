@@ -4,9 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'camera_screen.dart'; // Import the camera screen file
-import 'dart:async';
-import 'onnx_vlm.dart';
-import 'dart:js_interop';
 import 'package:hive_flutter/hive_flutter.dart';
 
 // final log = Logger('Main');
@@ -41,19 +38,12 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-
-  final loadingMessageNotifier = ValueNotifier<String>("Loading AI Models, please wait...");
-
   // Initialize a variable to track whether location data has been loaded
-  late Future<bool> vlmLoadingFuture;
   late LocationPermission permission = LocationPermission.unableToDetermine;
 
   @override
   void initState() {
     super.initState();
-    // Call initPosition() asynchronously and wait for it to complete
-    updateUILoadingSteps = updateLoadingSteps.toJS;
-    vlmLoadingFuture = loadNanoVLM().toDart as Future<bool>;
     _init();
   }
 
@@ -64,10 +54,6 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
-  void updateLoadingSteps(JSString text){
-    loadingMessageNotifier.value = text.toDart;
-  }
-
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -76,37 +62,12 @@ class _MyAppState extends State<MyApp> {
         colorScheme: ColorScheme.fromSeed(seedColor: const Color.fromRGBO(41, 182, 246, 1)),
         useMaterial3: true,
       ),
-      home: FutureBuilder<bool>(
-        future: vlmLoadingFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            // Show spinner while VLM loads
-            return LoadingScreen(notifier: loadingMessageNotifier); 
-          } else if (snapshot.hasError || snapshot.data == false) {
-            // Show error if loading fails
-            return const ErrorScreen(); 
-          }
-          // Check location permission
-          return _buildHomeWidget(permission, _init);
-        },
-      ),
-    );
-  }
-}
-
-class ErrorScreen extends StatelessWidget {
-  const ErrorScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(child: Text("Failed to load SmolVLM. Please try again.")),
+      home: _buildHomeWidget(permission, _init),
     );
   }
 }
 
 Widget _buildHomeWidget(LocationPermission permission, void Function() askForLocationsPermission) {
-
   final loadingMessageNotifier = ValueNotifier<String>("You can't deny basic serives as camera or internet connections by using this app...");
 
   switch (permission) {

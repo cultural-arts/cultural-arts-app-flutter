@@ -1,17 +1,15 @@
 import 'dart:convert';
-import 'dart:js_interop';
 
 import 'package:camera/camera.dart';
-import 'package:cultural_arts/api/art_suggestion_api.dart';
-import 'package:cultural_arts/api/classes/art_suggestions.dart';
+import 'package:cultural_arts/api/ai_companion_api.dart';
 import 'package:cultural_arts/api/communication_driver.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:http/http.dart' as http;
 
 import 'utils/geo_utilities.dart';
-import 'onnx_vlm.dart';
 
 class UploadPhoto extends StatefulWidget {
   const UploadPhoto({super.key, required this.acquiredImage});
@@ -23,40 +21,28 @@ class UploadPhoto extends StatefulWidget {
 }
 
 class _MyUploadPhotoState extends State<UploadPhoto> {
-  // variables to store widget data
-  late XFile acquiredImage;
-
-  // variables to store state data
-  bool photoUploadedToCloud = false;
-  int uploadAttempts = 3;
-  String? base64Image; // the base64 image version
-  Map<String, String> exifData = {}; // the exif data container
-
-  // for streaming tokens
-  List<String> streamedTokens = [];
-  String get streamedText => streamedTokens.join();
+  late final AiCompanionAPI aiCompanionAPI;
+  bool isLoading = true;
+  String? description;
+  String? errorMessage;
 
   @override
   void initState() {
     super.initState();
-    // obtain the image path by using widget*
-    acquiredImage = widget.acquiredImage;
-    tokenToUI = updateStreamedTokens.toJS;
+    aiCompanionAPI = AiCompanionAPI(baseUrl: CommunicationDriver.baseURL);
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      _uploadPhoto();
+    });
+  }
 
-    // when this callback is called we are sure that the widget is completely build and drawn,
-    // in fact the documentation says "callback after the last frame..."
-    SchedulerBinding.instance.addPostFrameCallback((timeStamp) {
-      try {
-        uploadPhoto(context); // context is captured from the State object
-      } on PlatformException catch (e) {
-        myDialogBuilder(context, "Error 01", "$e", Icons.error);
-      }
-    },);
+  @override
+  void dispose() {
+    aiCompanionAPI.close();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
       backgroundColor: Theme.of(context).primaryColor,
       body: Center(
@@ -64,42 +50,57 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
             const Text(
-              "cultural-arts.com",
-              style: TextStyle(
-                color: Colors.white, // Title text color
-                fontSize: 24.0, // Title text font size
-              ),
+              'cultural-arts.com',
+              style: TextStyle(color: Colors.white, fontSize: 24),
             ),
-            const SizedBox(height: 32.0),
-            Image.asset(
-              'assets/images/custom_icons_il_santo.png', // Replace with the path to your custom PNG icon
-            ),
-            const SizedBox(height: 32.0), // Space between spinner and icon
-            streamedText.isEmpty ?
-              const Column(
-                children: [
-                  Text(
-                    "searching for arts...",
-                    style: TextStyle(color: Colors.white,),
-                  ),
-                  SizedBox(height: 16.0),
-                  CircularProgressIndicator(color: Colors.white), // Loading spinner
-                  SizedBox(height: 32.0),
-                ]
-              ) : 
-              const Column(
-                children: [
-                  Text("Art Assistant", style: TextStyle(fontSize: 18, color: Colors.white,),),
-                  SizedBox(height: 16.0),
-                ],
+            const SizedBox(height: 32),
+            Image.asset('assets/images/custom_icons_il_santo.png'),
+            const SizedBox(height: 32),
+            if (isLoading) ...[
+              const Text(
+                'Generating image description...',
+                style: TextStyle(color: Colors.white),
               ),
+              const SizedBox(height: 16),
+              const CircularProgressIndicator(color: Colors.white),
+              const SizedBox(height: 32),
+            ] else if (errorMessage == null) ...[
+              const Text(
+                'Art Assistant',
+                style: TextStyle(fontSize: 18, color: Colors.white),
+              ),
+              const SizedBox(height: 16),
+            ],
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: SingleChildScrollView(
-                  child: Text(
-                    streamedText,
-                    style: const TextStyle(color: Colors.white, fontSize: 14),
+                  child: Column(
+                    children: [
+                      if (description != null)
+                        Text(
+                          description!,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                          ),
+                        ),
+                      if (errorMessage != null) ...[
+                        Text(
+                          errorMessage!,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        TextButton(
+                          onPressed: _uploadPhoto,
+                          child: const Text('Try again'),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
               ),
@@ -110,108 +111,68 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
     );
   }
 
-  String formatMapToString(Map<String, String> data) {
-    final List<String> keyValuePairs = [];
-
-    data.forEach((key, value) {
-      keyValuePairs.add('$key=$value');
-    });
-
+  String _formatMapToString(Map<String, String> data) {
+    final keyValuePairs =
+        data.entries.map((entry) => '${entry.key}=${entry.value}').toList();
     return '{${keyValuePairs.join(',')}}';
   }
 
-  // https://dart.dev/interop/js-interop/usage#export
-  void updateStreamedTokens(JSString token) {
-    final tokenStr = token.toDart;
+  Future<void> _uploadPhoto() async {
+    if (!mounted) return;
     setState(() {
-      streamedTokens.add(tokenStr);
+      isLoading = true;
+      description = null;
+      errorMessage = null;
     });
-  }
 
-  void uploadPhoto(context) async {
-    uploadAttempts--;
+    try {
+      final imageBytes = await widget.acquiredImage.readAsBytes();
+      final image = await decodeImageFromList(imageBytes);
+      final exifData = <String, String>{
+        'ImageLength': image.height.toString(),
+        'ImageWidth': image.width.toString(),
+      };
 
-    // encode image as base64
-    Uint8List imageBytes = await acquiredImage.readAsBytes();
+      final Position currentPosition = await LocationService.getPosition();
+      final latitude = currentPosition.latitude.toString();
+      final longitude = currentPosition.longitude.toString();
 
-    // obtain image width and height
-    var image = await decodeImageFromList(imageBytes);
-    exifData['ImageLength'] = image.height.toString();
-    exifData['ImageWidth'] = image.width.toString();
+      if (LocationService.isGPSValidCoordinates(latitude, longitude)) {
+        exifData['GPSLatitude'] = latitude;
+        exifData['GPSLongitude'] = longitude;
+      } else {
+        exifData['OriginalGPSLatitude'] = latitude;
+        exifData['OriginalGPSLongitude'] = longitude;
+        exifData['GPSLatitude'] = LocationConfig.defaultLatitude.toString();
+        exifData['GPSLongitude'] = LocationConfig.defaultLongitude.toString();
+      }
 
-    // encode image to send
-    base64Image = base64Encode(imageBytes);
+      final result = await aiCompanionAPI.describeImage(
+        base64Encode(imageBytes),
+        _formatMapToString(exifData),
+      );
 
-    // add gps location provider with geolocator
-    Position currentPosition = await LocationService.getPosition();
-    String latitude = currentPosition.latitude.toString();
-    String longitude = currentPosition.longitude.toString();
-
-    if (LocationService.isGPSValidCoordinates(latitude, longitude)) {
-      exifData["GPSLatitude"] = latitude;
-      exifData["GPSLongitude"] = longitude;
-    } else {
-      exifData["OriginalGPSLatitude"] = latitude;
-      exifData["OriginalGPSLongitude"] = longitude;
-      exifData["GPSLatitude"] = LocationConfig.defaultLatitude.toString();
-      exifData["GPSLongitude"] = LocationConfig.defaultLongitude.toString();
-    }
-
-    final formattedExifData = formatMapToString(exifData);
-
-    var artSuggestionsAPI = ArtSuggestionsAPI(baseUrl: CommunicationDriver.baseURL);
-
-    final response = await artSuggestionsAPI.searchPerfectMatch(base64Image!, formattedExifData);
-
-    switch (response.statusCode) {
-      case 200:
-        break;
-      case CommunicationDriver.http230CulturalArtsServerUnderMaintenance:
-        myDialogBuilder(
-          context, 
-          "Server Error", 
-          "The server is currently undergoing maintenance.", 
-          Icons.warning
-        );
-        break;
-      case CommunicationDriver.http227CulturalArtsFoundPerfectMatch:
-        final perfectMatch = ArtSuggestions.fromJson(jsonDecode(response.body));
-        // Navigate to the presentation activity with perfectMatch
-        break;
-      case CommunicationDriver.http228CulturalArtsFoundFirstStrikeSuggestions:
-        break;
-      case CommunicationDriver.http229CulturalArtsFoundSecondStrikeSuggestions:
-        break;
-      case CommunicationDriver.http231CulturalArtsNoResultsFound:
-        // "https://cdn.britannica.com/61/93061-050-99147DCE/Statue-of-Liberty-Island-New-York-Bay.jpg"
-        var generatedText = await runNanoVLM(acquiredImage.path).toDart as String;
-        break;
-      case CommunicationDriver.http452CulturalArtsInvalidImg:
-        break;
-      case CommunicationDriver.http453CulturalArtsInvalidGpsCoordinates:
-        break;
-      case CommunicationDriver.http454CulturalArtsInappropriateContent:
-        break;
+      if (!mounted) return;
+      setState(() {
+        description = result;
+        isLoading = false;
+      });
+    } on AiCompanionApiException catch (error) {
+      _showError(error.message);
+    } on http.ClientException {
+      _showError('Unable to connect to the image description service.');
+    } on FormatException catch (error) {
+      _showError(error.message);
+    } on PlatformException catch (error) {
+      _showError(error.message ?? 'Unable to prepare the image.');
     }
   }
 
-  void myDialogBuilder(BuildContext context, String title, String msg, IconData iconData) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(title),
-        content: Text(msg),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-            },
-            child: const Text("OK"),
-          ),
-        ],
-      ),
-    ).then((val) {
-      Navigator.of(context).pop();
+  void _showError(String message) {
+    if (!mounted) return;
+    setState(() {
+      errorMessage = message;
+      isLoading = false;
     });
   }
 }
