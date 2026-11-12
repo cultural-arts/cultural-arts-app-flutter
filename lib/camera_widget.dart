@@ -38,20 +38,16 @@ class TakePictureScreenState extends State<TakePictureScreen> {
       _cameras = await availableCameras();
 
       // Initialize the controller with the first camera in the list
-      _controller = CameraController(
-        _cameras.last,
-        ResolutionPreset.high,
-        enableAudio: false,
-        imageFormatGroup: ImageFormatGroup.jpeg
-      );
+      _controller = CameraController(_cameras.last, ResolutionPreset.high,
+          enableAudio: false, imageFormatGroup: ImageFormatGroup.jpeg);
 
       // Initialize the controller. This returns a Future.
       _initializeControllerFuture = _controller.initialize();
 
       // Lock capture orientation after initialization completes
       // _initializeControllerFuture?.then((_) {
-        // Allows to make the camera fullscreen, do not solve the image orientation error when device rotates
-        // _controller.lockCaptureOrientation(DeviceOrientation.portraitUp);
+      // Allows to make the camera fullscreen, do not solve the image orientation error when device rotates
+      // _controller.lockCaptureOrientation(DeviceOrientation.portraitUp);
       // });
 
       if (mounted) {
@@ -108,7 +104,8 @@ class TakePictureScreenState extends State<TakePictureScreen> {
                   StreamBuilder<AccelerometerEvent>(
                     stream: _orientationStream,
                     builder: (context, snapshot) {
-                      final orientationText = _orientationFromAccelerometer(snapshot.data);
+                      final orientationText =
+                          _orientationFromAccelerometer(snapshot.data);
                       return Positioned(
                         top: 10,
                         left: 10,
@@ -156,15 +153,14 @@ class TakePictureScreenState extends State<TakePictureScreen> {
 
             // If the picture was taken, save it in the local storage to show in the main screen.
             Uint8List imageBytes = await acquiredImage.readAsBytes();
-            await WebPhotoStorage.savePhoto(imageBytes);
+            final photoId = await WebPhotoStorage.savePhoto(imageBytes);
 
             // If the picture was taken, pass it to the upload screen.
             await Navigator.of(context).push(
               MaterialPageRoute(
                 builder: (context) => UploadPhoto(
-                  // Pass the automatically generated path to
-                  // the DisplayPictureScreen widget.
-                  acquiredImage: acquiredImage,
+                  photoId: photoId,
+                  imageBytes: imageBytes,
                 ),
               ),
             );
@@ -190,7 +186,7 @@ class TakePictureScreenState extends State<TakePictureScreen> {
       return x > 0 ? 'landscape-right' : 'landscape-left';
     }
 
-    return y > 0 ?  'portrait' : 'portrait-upside-down';
+    return y > 0 ? 'portrait' : 'portrait-upside-down';
   }
 }
 

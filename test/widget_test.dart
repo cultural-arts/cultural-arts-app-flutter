@@ -1,30 +1,76 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'dart:convert';
+import 'dart:io';
 
 import 'package:cultural_arts/main.dart';
+import 'package:cultural_arts/utils/web_storage.dart';
+import 'package:cultural_arts/widgets/ai_disclosure.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:hive/hive.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  late Directory hiveDirectory;
+  late Box<dynamic> photosBox;
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+  setUpAll(() async {
+    hiveDirectory = await Directory.systemTemp.createTemp('cultural-arts-ui');
+    Hive.init(hiveDirectory.path);
+    photosBox = await Hive.openBox<dynamic>('photos');
+  });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
+  setUp(() async {
+    await photosBox.clear();
+  });
+
+  tearDownAll(() async {
+    await photosBox.close();
+    await hiveDirectory.delete(recursive: true);
+  });
+
+  testWidgets('AI disclosure explains the value and limitations', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: AiDisclosureCard(),
+        ),
+      ),
+    );
+
+    expect(find.text(aiDisclosureTitle), findsOneWidget);
+    expect(
+      find.textContaining('We work to provide valuable results'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('AI can make mistakes'), findsOneWidget);
+  });
+
+  testWidgets('selecting a gallery photo opens its saved description', (
+    WidgetTester tester,
+  ) async {
+    final image = base64Decode(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC',
+    );
+    final photoId = await WebPhotoStorage.savePhoto(image);
+    await WebPhotoStorage.setDescription(
+      photoId,
+      'A carefully researched description.',
+    );
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: MyHomePage(title: 'cultural-arts.com'),
+      ),
+    );
     await tester.pump();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    await tester.tap(find.text('A carefully researched description.'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.text('The story behind your photo'), findsOneWidget);
+    expect(find.text('A carefully researched description.'), findsOneWidget);
+    expect(find.text('AI-generated'), findsOneWidget);
   });
 }

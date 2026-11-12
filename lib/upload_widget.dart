@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:camera/camera.dart';
 import 'package:cultural_arts/api/ai_companion_api.dart';
 import 'package:cultural_arts/api/communication_driver.dart';
 import 'package:flutter/material.dart';
@@ -10,17 +9,24 @@ import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 
 import 'utils/geo_utilities.dart';
+import 'utils/web_storage.dart';
+import 'widgets/ai_disclosure.dart';
 
 class UploadPhoto extends StatefulWidget {
-  const UploadPhoto({super.key, required this.acquiredImage});
+  const UploadPhoto({
+    super.key,
+    required this.photoId,
+    required this.imageBytes,
+  });
 
-  final XFile acquiredImage;
+  final String photoId;
+  final Uint8List imageBytes;
 
   @override
-  State<UploadPhoto> createState() => _MyUploadPhotoState();
+  State<UploadPhoto> createState() => _UploadPhotoState();
 }
 
-class _MyUploadPhotoState extends State<UploadPhoto> {
+class _UploadPhotoState extends State<UploadPhoto> {
   late final AiCompanionAPI aiCompanionAPI;
   bool isLoading = true;
   String? description;
@@ -43,70 +49,75 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
-      backgroundColor: Theme.of(context).primaryColor,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text(
-              'cultural-arts.com',
-              style: TextStyle(color: Colors.white, fontSize: 24),
+      appBar: AppBar(
+        title: const Text('Your discovery'),
+        actions: [
+          if (description != null)
+            IconButton(
+              tooltip: 'Copy AI-generated description',
+              icon: const Icon(Icons.copy),
+              onPressed: () => _copyDescription(description!),
             ),
-            const SizedBox(height: 32),
-            Image.asset('assets/images/custom_icons_il_santo.png'),
-            const SizedBox(height: 32),
-            if (isLoading) ...[
-              const Text(
-                'Generating image description...',
-                style: TextStyle(color: Colors.white),
-              ),
-              const SizedBox(height: 16),
-              const CircularProgressIndicator(color: Colors.white),
-              const SizedBox(height: 32),
-            ] else if (errorMessage == null) ...[
-              const Text(
-                'Art Assistant',
-                style: TextStyle(fontSize: 18, color: Colors.white),
-              ),
-              const SizedBox(height: 16),
-            ],
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      if (description != null)
-                        Text(
-                          description!,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 14,
-                          ),
-                        ),
-                      if (errorMessage != null) ...[
-                        Text(
-                          errorMessage!,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 14,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        TextButton(
-                          onPressed: _uploadPhoto,
-                          child: const Text('Try again'),
-                        ),
-                      ],
-                    ],
+        ],
+      ),
+      body: ListView(
+        padding: const EdgeInsets.only(bottom: 24),
+        children: [
+          Image.memory(
+            widget.imageBytes,
+            height: 260,
+            width: double.infinity,
+            fit: BoxFit.cover,
+            semanticLabel: 'Photo being described by AI',
+          ),
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (isLoading) ...[
+                  const AiGeneratedBadge(),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Generating an AI description...',
+                    style: theme.textTheme.titleLarge,
                   ),
-                ),
-              ),
+                  const SizedBox(height: 16),
+                  const LinearProgressIndicator(),
+                ] else if (errorMessage != null) ...[
+                  Text(
+                    'We couldn’t create your description this time.',
+                    style: theme.textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(errorMessage!, style: theme.textTheme.bodyLarge),
+                  const SizedBox(height: 16),
+                  FilledButton.icon(
+                    onPressed: _uploadPhoto,
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Try again'),
+                  ),
+                ] else ...[
+                  const AiGeneratedBadge(),
+                  const SizedBox(height: 8),
+                  Text(
+                    'The story behind your photo',
+                    style: theme.textTheme.headlineSmall,
+                  ),
+                  const SizedBox(height: 12),
+                  SelectableText(
+                    description!,
+                    style: theme.textTheme.bodyLarge,
+                  ),
+                ],
+                const SizedBox(height: 20),
+                const AiDisclosureCard(),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -126,12 +137,13 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
     });
 
     try {
-      final imageBytes = await widget.acquiredImage.readAsBytes();
-      final image = await decodeImageFromList(imageBytes);
+      await WebPhotoStorage.setGenerationPending(widget.photoId);
+      final image = await decodeImageFromList(widget.imageBytes);
       final exifData = <String, String>{
         'ImageLength': image.height.toString(),
         'ImageWidth': image.width.toString(),
       };
+      image.dispose();
 
       final Position currentPosition = await LocationService.getPosition();
       final latitude = currentPosition.latitude.toString();
@@ -148,9 +160,10 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
       }
 
       final result = await aiCompanionAPI.describeImage(
-        base64Encode(imageBytes),
+        base64Encode(widget.imageBytes),
         _formatMapToString(exifData),
       );
+      await WebPhotoStorage.setDescription(widget.photoId, result);
 
       if (!mounted) return;
       setState(() {
@@ -158,21 +171,33 @@ class _MyUploadPhotoState extends State<UploadPhoto> {
         isLoading = false;
       });
     } on AiCompanionApiException catch (error) {
-      _showError(error.message);
+      await _showError(error.message);
     } on http.ClientException {
-      _showError('Unable to connect to the image description service.');
+      await _showError('Unable to connect to the image description service.');
     } on FormatException catch (error) {
-      _showError(error.message);
+      await _showError(error.message);
     } on PlatformException catch (error) {
-      _showError(error.message ?? 'Unable to prepare the image.');
+      await _showError(error.message ?? 'Unable to prepare the image.');
     }
   }
 
-  void _showError(String message) {
+  Future<void> _showError(String message) async {
+    await WebPhotoStorage.setGenerationFailed(widget.photoId, message);
     if (!mounted) return;
     setState(() {
       errorMessage = message;
       isLoading = false;
     });
+  }
+
+  Future<void> _copyDescription(String text) async {
+    await Clipboard.setData(
+      ClipboardData(
+          text: 'AI-generated description (may contain errors):\n\n$text'),
+    );
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('AI-generated description copied.')),
+    );
   }
 }

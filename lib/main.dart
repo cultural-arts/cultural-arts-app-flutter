@@ -1,5 +1,8 @@
 import 'package:cultural_arts/utils/geo_utilities.dart';
 import 'package:cultural_arts/utils/web_storage.dart';
+import 'package:cultural_arts/models/photo_record.dart';
+import 'package:cultural_arts/photo_detail_screen.dart';
+import 'package:cultural_arts/widgets/ai_disclosure.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
@@ -13,6 +16,8 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Hive.initFlutter();
   await Hive.openBox('photos');
+  await WebPhotoStorage.migrateLegacyPhotos();
+  await WebPhotoStorage.markInterruptedGenerations();
 
   // main app
   runApp(const MyApp());
@@ -23,8 +28,10 @@ void main() async {
 /// ---------------------------
 
 const bool useFakeLocation = kDebugMode;
-const String appVersion = String.fromEnvironment('APP_VERSION', defaultValue: 'unknown');
-const String appEnv = String.fromEnvironment('APP_ENV', defaultValue: kReleaseMode ? 'production' : 'development');
+const String appVersion =
+    String.fromEnvironment('APP_VERSION', defaultValue: 'unknown');
+const String appEnv = String.fromEnvironment('APP_ENV',
+    defaultValue: kReleaseMode ? 'production' : 'development');
 
 /// ---------------------------
 /// APP
@@ -49,6 +56,7 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> _init() async {
     final result = await LocationService.checkPermission();
+    if (!mounted) return;
     setState(() {
       permission = result;
     });
@@ -59,7 +67,45 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp(
       title: 'cultural-arts.com',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color.fromRGBO(41, 182, 246, 1)),
+        colorScheme: ColorScheme.fromSeed(
+            seedColor: const Color.fromRGBO(41, 182, 246, 1)),
+        fontFamily: 'Roboto',
+        textTheme: const TextTheme(
+          displaySmall: TextStyle(
+            fontSize: 32,
+            height: 1.15,
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.5,
+          ),
+          headlineMedium: TextStyle(
+            fontSize: 24,
+            height: 1.2,
+            fontWeight: FontWeight.w700,
+          ),
+          headlineSmall: TextStyle(
+            fontSize: 21,
+            height: 1.25,
+            fontWeight: FontWeight.w600,
+          ),
+          titleLarge: TextStyle(
+            fontSize: 20,
+            height: 1.3,
+            fontWeight: FontWeight.w600,
+          ),
+          titleMedium: TextStyle(
+            fontSize: 16,
+            height: 1.35,
+            fontWeight: FontWeight.w600,
+          ),
+          bodyLarge: TextStyle(fontSize: 16, height: 1.55),
+          bodyMedium: TextStyle(fontSize: 14, height: 1.45),
+          bodySmall: TextStyle(fontSize: 12, height: 1.4),
+          labelLarge: TextStyle(
+            fontSize: 14,
+            height: 1.3,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         useMaterial3: true,
       ),
       home: _buildHomeWidget(permission, _init),
@@ -67,8 +113,10 @@ class _MyAppState extends State<MyApp> {
   }
 }
 
-Widget _buildHomeWidget(LocationPermission permission, void Function() askForLocationsPermission) {
-  final loadingMessageNotifier = ValueNotifier<String>("You can't deny basic serives as camera or internet connections by using this app...");
+Widget _buildHomeWidget(
+    LocationPermission permission, void Function() askForLocationsPermission) {
+  final loadingMessageNotifier = ValueNotifier<String>(
+      "You can't deny basic serives as camera or internet connections by using this app...");
 
   switch (permission) {
     case LocationPermission.whileInUse:
@@ -108,7 +156,6 @@ class LocationPermissionWidget extends StatelessWidget {
               const Text(
                 'Location permission is required to use this app.',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 18),
               ),
               const SizedBox(height: 20),
               ElevatedButton(
@@ -131,27 +178,25 @@ class LoadingScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
-        child: ValueListenableBuilder(
-          valueListenable: notifier,
-          builder: (context, message, _) => Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const CircularProgressIndicator(),
-                const SizedBox(height: 20),
-                Text(
-                  message,
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  textAlign: TextAlign.center,
-                ),
-              ],
+        body: Center(
+      child: ValueListenableBuilder(
+        valueListenable: notifier,
+        builder: (context, message, _) => Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 20),
+            Text(
+              message,
+              style: Theme.of(context).textTheme.titleMedium,
+              textAlign: TextAlign.center,
             ),
+          ],
         ),
-      )
-    );
+      ),
+    ));
   }
 }
-
 
 class MyHomePage extends StatefulWidget {
   final String title;
@@ -163,21 +208,6 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  Position? position;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadPosition();
-  }
-
-  Future<void> _loadPosition() async {
-    final pos = await LocationService.getPosition();
-    setState(() {
-      position = pos;
-    });
-  }
-
   void _showVersionDialog() {
     showDialog<void>(
       context: context,
@@ -202,7 +232,8 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final photos = WebPhotoStorage.getPhotos();
+    final photos = WebPhotoStorage.getPhotoRecords();
+    final theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(
@@ -213,113 +244,122 @@ class _MyHomePageState extends State<MyHomePage> {
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
           IconButton(
+            tooltip: 'Delete all photos',
             icon: const Icon(Icons.delete_forever),
-            onPressed: () async {
-              final confirm = await showDialog<bool>(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text("Delete all photos?"),
-                  content: const Text(
-                    "This will permanently remove all stored images.",
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context, false),
-                      child: const Text("Cancel"),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.pop(context, true),
-                      child: const Text("Delete"),
-                    ),
-                  ],
-                ),
-              );
-
-              if (confirm == true) {
-                await WebPhotoStorage.clear();
-                setState(() {});
-              }
-            },
-          ),
-        ],
-      ),
-
-      body: Stack(
-        children: [
-          // ----------------------------
-          // BACKGROUND / EMPTY STATE
-          // ----------------------------
-          Container(
-            decoration: const BoxDecoration(
-              image: DecorationImage(
-                image: AssetImage('assets/images/take_statue_picture.png'),
-                fit: BoxFit.cover,
-              ),
-            ),
-          ),
-
-          // ----------------------------
-          // DEV MODE INDICATOR
-          // ----------------------------
-          if (useFakeLocation)
-            const Positioned(
-              top: 40,
-              left: 20,
-              child: Chip(
-                label: Text("DEV MODE - FAKE LOCATION"),
-              ),
-            ),
-
-          // ----------------------------
-          // PHOTO GRID (IF EXISTS)
-          // ----------------------------
-          if (photos.isNotEmpty)
-            Positioned.fill(
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: GridView.builder(
-                  itemCount: photos.length,
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3,
-                    crossAxisSpacing: 8,
-                    mainAxisSpacing: 8,
-                  ),
-                  itemBuilder: (context, index) {
-                    return ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.memory(
-                        photos[index],
-                        fit: BoxFit.cover,
+            onPressed: photos.isEmpty
+                ? null
+                : () async {
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Delete all photos?'),
+                        content: const Text(
+                          'This will permanently remove all saved photos and descriptions.',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: const Text('Cancel'),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, true),
+                            child: const Text('Delete'),
+                          ),
+                        ],
                       ),
                     );
+
+                    if (confirm == true) {
+                      await WebPhotoStorage.clear();
+                      if (mounted) setState(() {});
+                    }
                   },
-                ),
+          ),
+        ],
+      ),
+      body: CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (useFakeLocation)
+                    const Padding(
+                      padding: EdgeInsets.only(bottom: 12),
+                      child: Chip(label: Text('DEV MODE - FAKE LOCATION')),
+                    ),
+                  Text(
+                    'Discover cultural heritage',
+                    style: theme.textTheme.displaySmall,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Capture a place or artwork and explore the story behind it.',
+                    style: theme.textTheme.bodyLarge,
+                  ),
+                  const SizedBox(height: 16),
+                  const AiDisclosureCard(),
+                  if (photos.isNotEmpty) ...[
+                    const SizedBox(height: 24),
+                    Text('Your discoveries', style: theme.textTheme.titleLarge),
+                  ],
+                ],
               ),
             ),
-
-          // ----------------------------
-          // EMPTY STATE MESSAGE
-          // ----------------------------
+          ),
           if (photos.isEmpty)
-            const Center(
-              child: Text(
-                "No photos yet.\nStart capturing cultural heritage!",
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Color.fromARGB(255, 0, 0, 0),
-                  fontSize: 20,
-                  fontFamily: 'Roboto',
-                  fontWeight: FontWeight.w800,
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.photo_camera_outlined,
+                        size: 48,
+                        color: theme.colorScheme.primary,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Your discoveries will appear here',
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Take your first photo to get started.',
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.bodyMedium,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            )
+          else
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+              sliver: SliverGrid(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) => _buildPhotoCard(photos[index]),
+                  childCount: photos.length,
+                ),
+                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                  maxCrossAxisExtent: 240,
+                  mainAxisExtent: 270,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
                 ),
               ),
             ),
         ],
       ),
-
-      // ----------------------------
-      // ALWAYS VISIBLE CAMERA BUTTON
-      // ----------------------------
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.extended(
+        tooltip: 'Take a photo',
         onPressed: () async {
           await Navigator.push(
             context,
@@ -328,10 +368,99 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
           );
 
-          setState(() {}); // refresh
+          if (mounted) setState(() {});
         },
-        child: const Icon(Icons.add_a_photo),
+        icon: const Icon(Icons.add_a_photo),
+        label: const Text('Take a photo'),
       ),
     );
+  }
+
+  Widget _buildPhotoCard(PhotoRecord photo) {
+    final theme = Theme.of(context);
+    final subtitle = switch (photo.status) {
+      PhotoGenerationStatus.ready => photo.description!,
+      PhotoGenerationStatus.pending => 'Generating your description…',
+      PhotoGenerationStatus.failed => 'Description unavailable · Tap to retry',
+      PhotoGenerationStatus.notGenerated => 'Generate an AI description',
+    };
+
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => Navigator.of(context)
+            .push(
+          MaterialPageRoute<void>(
+            builder: (_) => PhotoDetailScreen(photoId: photo.id),
+          ),
+        )
+            .then((_) {
+          if (mounted) setState(() {});
+        }),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              flex: 5,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Image.memory(
+                    photo.imageBytes,
+                    fit: BoxFit.cover,
+                    gaplessPlayback: true,
+                    semanticLabel: 'Saved cultural heritage photo',
+                  ),
+                  if (photo.status == PhotoGenerationStatus.pending)
+                    const Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      child: LinearProgressIndicator(),
+                    ),
+                ],
+              ),
+            ),
+            Expanded(
+              flex: 4,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _formattedDate(photo.capturedAt),
+                      style: theme.textTheme.bodySmall,
+                    ),
+                    const SizedBox(height: 4),
+                    if (photo.status == PhotoGenerationStatus.ready)
+                      const Padding(
+                        padding: EdgeInsets.only(bottom: 4),
+                        child: AiGeneratedBadge(),
+                      ),
+                    Expanded(
+                      child: Text(
+                        subtitle,
+                        maxLines:
+                            photo.status == PhotoGenerationStatus.ready ? 2 : 3,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodyMedium,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formattedDate(DateTime date) {
+    final localDate = date.toLocal();
+    final month = localDate.month.toString().padLeft(2, '0');
+    final day = localDate.day.toString().padLeft(2, '0');
+    return '$month/$day/${localDate.year}';
   }
 }
