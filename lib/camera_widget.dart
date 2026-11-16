@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -6,7 +5,6 @@ import 'package:camera/camera.dart';
 import 'package:cultural_arts/upload_widget.dart';
 import 'package:cultural_arts/utils/web_storage.dart';
 import 'package:flutter/material.dart';
-import 'package:sensors_plus/sensors_plus.dart';
 
 // A screen that allows users to take a picture using a given camera.
 class TakePictureScreen extends StatefulWidget {
@@ -20,13 +18,17 @@ class TakePictureScreenState extends State<TakePictureScreen> {
   late CameraController _controller;
   late Future<void>? _initializeControllerFuture;
   late List<CameraDescription> _cameras;
-  late Stream<AccelerometerEvent> _orientationStream;
+  double _minZoomLevel = 1;
+  double _maxZoomLevel = 1;
+  double _zoomLevel = 1;
+  double _zoomAtScaleStart = 1;
+  double? _pendingZoomLevel;
+  bool _isApplyingZoom = false;
 
   @override
   void initState() {
     super.initState();
     _initializeControllerFuture = null;
-    _orientationStream = accelerometerEventStream();
     _initializeCamera();
   }
 
@@ -41,8 +43,16 @@ class TakePictureScreenState extends State<TakePictureScreen> {
       _controller = CameraController(_cameras.last, ResolutionPreset.high,
           enableAudio: false, imageFormatGroup: ImageFormatGroup.jpeg);
 
-      // Initialize the controller. This returns a Future.
-      _initializeControllerFuture = _controller.initialize();
+      _initializeControllerFuture = _controller.initialize().then((_) async {
+        final minZoomLevel = await _controller.getMinZoomLevel();
+        final maxZoomLevel = await _controller.getMaxZoomLevel();
+        if (!mounted) return;
+        setState(() {
+          _minZoomLevel = minZoomLevel;
+          _maxZoomLevel = maxZoomLevel;
+          _zoomLevel = minZoomLevel;
+        });
+      });
 
       // Lock capture orientation after initialization completes
       // _initializeControllerFuture?.then((_) {
@@ -89,43 +99,29 @@ class TakePictureScreenState extends State<TakePictureScreen> {
               return Stack(
                 fit: StackFit.expand,
                 children: [
-                  // Camera preview - handles its own rotation and aspect ratio
                   Positioned.fill(
                     child: FittedBox(
                       fit: BoxFit.cover,
                       child: SizedBox(
                         width: MediaQuery.of(context).size.width,
                         height: MediaQuery.of(context).size.height,
-                        child: CameraPreview(_controller),
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onScaleStart: (_) {
+                            _zoomAtScaleStart = _zoomLevel;
+                          },
+                          onScaleUpdate: (details) {
+                            final zoomLevel =
+                                (_zoomAtScaleStart * details.scale).clamp(
+                              _minZoomLevel,
+                              _maxZoomLevel,
+                            );
+                            _setZoomLevel(zoomLevel.toDouble());
+                          },
+                          child: CameraPreview(_controller),
+                        ),
                       ),
                     ),
-                  ),
-                  // Orientation text overlay with live updates
-                  StreamBuilder<AccelerometerEvent>(
-                    stream: _orientationStream,
-                    builder: (context, snapshot) {
-                      final orientationText =
-                          _orientationFromAccelerometer(snapshot.data);
-                      return Positioned(
-                        top: 10,
-                        left: 10,
-                        right: 0,
-                        child: Container(
-                          decoration: const BoxDecoration(
-                            color: Colors.transparent,
-                          ),
-                          child: Text(
-                            orientationText,
-                            style: const TextStyle(
-                              color: Color.fromARGB(255, 0, 0, 0),
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            textAlign: TextAlign.left,
-                          ),
-                        ),
-                      );
-                    },
                   ),
                 ],
               );
@@ -174,19 +170,29 @@ class TakePictureScreenState extends State<TakePictureScreen> {
     );
   }
 
-  String _orientationFromAccelerometer(AccelerometerEvent? event) {
-    if (event == null) {
-      return 'unknown';
+  void _setZoomLevel(double zoomLevel) {
+    _zoomLevel = zoomLevel;
+    _pendingZoomLevel = zoomLevel;
+    if (_isApplyingZoom) return;
+    _applyPendingZoom();
+  }
+
+  Future<void> _applyPendingZoom() async {
+    _isApplyingZoom = true;
+    try {
+      while (_pendingZoomLevel != null && mounted) {
+        final zoomLevel = _pendingZoomLevel!;
+        _pendingZoomLevel = null;
+        try {
+          await _controller.setZoomLevel(zoomLevel);
+        } on CameraException catch (error) {
+          debugPrint('Unable to set camera zoom: ${error.description}');
+          _pendingZoomLevel = null;
+        }
+      }
+    } finally {
+      _isApplyingZoom = false;
     }
-
-    final x = event.x;
-    final y = event.y;
-
-    if (x.abs() > y.abs()) {
-      return x > 0 ? 'landscape-right' : 'landscape-left';
-    }
-
-    return y > 0 ? 'portrait' : 'portrait-upside-down';
   }
 }
 
