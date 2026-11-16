@@ -4,17 +4,17 @@ enum CompanionMode {
   standard(
     'standard',
     'Standard',
-    'A balanced description of the place or artwork.',
+    'Discover the highlights and stories behind this cultural heritage artifact with an engaging, well-rounded description.',
   ),
   snapshot(
     'snapshot',
     'Snapshot',
-    'A short, quick overview.',
+    'Get to know this cultural heritage artifact at a glance with a quick, captivating overview.',
   ),
   insight(
     'insight',
     'Insight',
-    'A more detailed look at meaning and context.',
+    'Go beyond the surface with an in-depth exploration of its history, cultural significance, artistic meaning, and hidden details.',
   );
 
   const CompanionMode(this.value, this.title, this.description);

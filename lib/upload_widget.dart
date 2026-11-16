@@ -12,7 +12,6 @@ import 'utils/geo_utilities.dart';
 import 'utils/companion_mode.dart';
 import 'utils/web_storage.dart';
 import 'widgets/ai_disclosure.dart';
-import 'widgets/companion_mode_dialog.dart';
 
 class UploadPhoto extends StatefulWidget {
   const UploadPhoto({
@@ -139,16 +138,7 @@ class _UploadPhotoState extends State<UploadPhoto> {
     });
 
     try {
-      var mode = CompanionModeStorage.mode;
-      if (mode == null) {
-        mode = await showCompanionModeDialog(context);
-        if (mode == null) {
-          await _showError(
-              'Choose an AI companion mode to generate a description.');
-          return;
-        }
-        await CompanionModeStorage.save(mode);
-      }
+      final mode = CompanionModeStorage.mode ?? CompanionMode.standard;
 
       await WebPhotoStorage.setGenerationPending(widget.photoId);
       final image = await decodeImageFromList(widget.imageBytes);

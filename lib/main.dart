@@ -211,6 +211,14 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  CompanionMode? _companionMode;
+
+  @override
+  void initState() {
+    super.initState();
+    _companionMode = CompanionModeStorage.mode;
+  }
+
   void _showVersionDialog() {
     showDialog<void>(
       context: context,
@@ -246,11 +254,6 @@ class _MyHomePageState extends State<MyHomePage> {
         ),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
-          IconButton(
-            tooltip: 'AI companion mode',
-            icon: const Icon(Icons.tune),
-            onPressed: _showCompanionModeDialog,
-          ),
           IconButton(
             tooltip: 'Delete all photos',
             icon: const Icon(Icons.delete_forever),
@@ -307,6 +310,8 @@ class _MyHomePageState extends State<MyHomePage> {
                     'Capture a place or artwork and explore the story behind it.',
                     style: theme.textTheme.bodyLarge,
                   ),
+                  const SizedBox(height: 16),
+                  _buildCompanionModeCard(theme, _companionMode),
                   const SizedBox(height: 16),
                   AiDisclosureCard(compact: photos.isNotEmpty),
                   if (photos.isNotEmpty) ...[
@@ -387,15 +392,64 @@ class _MyHomePageState extends State<MyHomePage> {
   Future<void> _showCompanionModeDialog() async {
     final mode = await showCompanionModeDialog(
       context,
-      initialMode: CompanionModeStorage.mode,
+      initialMode: _companionMode ?? CompanionMode.standard,
     );
-    if (mode != null) {
-      await CompanionModeStorage.save(mode);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('AI companion mode set to ${mode.title}.')),
-      );
-    }
+    if (mode == null) return;
+    await CompanionModeStorage.save(mode);
+    if (!mounted) return;
+    setState(() => _companionMode = mode);
+  }
+
+  Widget _buildCompanionModeCard(
+    ThemeData theme,
+    CompanionMode? savedMode,
+  ) {
+    final mode = savedMode ?? CompanionMode.standard;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.auto_awesome,
+                  color: theme.colorScheme.primary,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        savedMode == null
+                            ? 'Choose your AI companion mode'
+                            : 'AI companion mode',
+                        style: theme.textTheme.titleMedium,
+                      ),
+                      Text(
+                        savedMode == null
+                            ? '${mode.title} is selected by default'
+                            : mode.title,
+                        style: theme.textTheme.bodyMedium,
+                      ),
+                    ],
+                  ),
+                ),
+                TextButton(
+                  onPressed: _showCompanionModeDialog,
+                  child: Text(savedMode == null ? 'Choose mode' : 'Change'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(mode.description, style: theme.textTheme.bodyMedium),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildPhotoCard(PhotoRecord photo) {

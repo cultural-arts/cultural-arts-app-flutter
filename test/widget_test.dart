@@ -5,7 +5,6 @@ import 'package:cultural_arts/main.dart';
 import 'package:cultural_arts/utils/companion_mode.dart';
 import 'package:cultural_arts/utils/web_storage.dart';
 import 'package:cultural_arts/widgets/ai_disclosure.dart';
-import 'package:cultural_arts/widgets/companion_mode_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
@@ -36,26 +35,14 @@ void main() {
   testWidgets('companion mode can be selected and persists', (
     WidgetTester tester,
   ) async {
-    CompanionMode? selectedMode;
     await tester.pumpWidget(
-      MaterialApp(
-        home: Builder(
-          builder: (context) => Scaffold(
-            body: TextButton(
-              onPressed: () async {
-                final mode = await showCompanionModeDialog(context);
-                selectedMode = mode;
-                if (mode != null) {
-                  await CompanionModeStorage.save(mode);
-                }
-              },
-              child: const Text('Choose mode'),
-            ),
-          ),
-        ),
+      const MaterialApp(
+        home: MyHomePage(title: 'cultural-arts.com'),
       ),
     );
 
+    expect(find.text('Choose your AI companion mode'), findsOneWidget);
+    expect(find.text('Standard is selected by default'), findsOneWidget);
     await tester.tap(find.text('Choose mode'));
     await tester.pumpAndSettle();
     await tester.tap(find.byWidgetPredicate(
@@ -66,9 +53,24 @@ void main() {
     await tester.pump();
     await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 100));
 
-    expect(selectedMode, CompanionMode.insight);
     expect(CompanionModeStorage.mode, CompanionMode.insight);
+    expect(find.text('AI companion mode'), findsOneWidget);
+    expect(find.text('Insight'), findsOneWidget);
+
+    await tester.tap(find.text('Change'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byWidgetPredicate(
+      (widget) =>
+          widget is RadioListTile<CompanionMode> &&
+          widget.value == CompanionMode.snapshot,
+    ));
+    await tester.pump();
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    expect(CompanionModeStorage.mode, CompanionMode.snapshot);
   });
 
   testWidgets('AI disclosure explains the value and limitations', (
