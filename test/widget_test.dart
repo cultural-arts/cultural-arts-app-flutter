@@ -32,7 +32,7 @@ void main() {
     await hiveDirectory.delete(recursive: true);
   });
 
-  testWidgets('companion mode can be selected and persists', (
+  testWidgets('first capture prompts for a mode and app bar can change it', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(
@@ -41,9 +41,15 @@ void main() {
       ),
     );
 
+    await tester.tap(find.byTooltip('Take a photo'));
+    await tester.pumpAndSettle();
     expect(find.text('Choose your AI companion mode'), findsOneWidget);
-    expect(find.text('Standard is selected by default'), findsOneWidget);
-    await tester.tap(find.text('Choose mode'));
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(CompanionModeStorage.mode, isNull);
+    expect(find.text('Discover cultural heritage'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('AI companion mode'));
     await tester.pumpAndSettle();
     await tester.tap(find.byWidgetPredicate(
       (widget) =>
@@ -56,21 +62,10 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
 
     expect(CompanionModeStorage.mode, CompanionMode.insight);
-    expect(find.text('AI companion mode'), findsOneWidget);
-    expect(find.text('Insight'), findsOneWidget);
-
-    await tester.tap(find.text('Change'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byWidgetPredicate(
-      (widget) =>
-          widget is RadioListTile<CompanionMode> &&
-          widget.value == CompanionMode.snapshot,
-    ));
-    await tester.pump();
-    await tester.tap(find.text('Save'));
-    await tester.pumpAndSettle();
-
-    expect(CompanionModeStorage.mode, CompanionMode.snapshot);
+    expect(
+      find.text('AI companion mode set to Insight.'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('AI disclosure explains the value and limitations', (

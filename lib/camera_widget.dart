@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -24,6 +25,8 @@ class TakePictureScreenState extends State<TakePictureScreen> {
   double _zoomAtScaleStart = 1;
   double? _pendingZoomLevel;
   bool _isApplyingZoom = false;
+  Offset? _focusIndicatorPosition;
+  Timer? _focusIndicatorTimer;
 
   @override
   void initState() {
@@ -70,6 +73,7 @@ class TakePictureScreenState extends State<TakePictureScreen> {
 
   @override
   void dispose() {
+    _focusIndicatorTimer?.cancel();
     // Dispose of the controller when the widget is disposed.
     _controller.dispose();
     super.dispose();
@@ -105,20 +109,55 @@ class TakePictureScreenState extends State<TakePictureScreen> {
                       child: SizedBox(
                         width: MediaQuery.of(context).size.width,
                         height: MediaQuery.of(context).size.height,
-                        child: GestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          onScaleStart: (_) {
-                            _zoomAtScaleStart = _zoomLevel;
-                          },
-                          onScaleUpdate: (details) {
-                            final zoomLevel =
-                                (_zoomAtScaleStart * details.scale).clamp(
-                              _minZoomLevel,
-                              _maxZoomLevel,
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            final previewSize = Size(
+                              constraints.maxWidth,
+                              constraints.maxHeight,
                             );
-                            _setZoomLevel(zoomLevel.toDouble());
+                            final focusIndicatorPosition =
+                                _focusIndicatorPosition;
+                            return GestureDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onTapUp: (details) => _focusAt(
+                                details.localPosition,
+                                previewSize,
+                              ),
+                              onScaleStart: (_) {
+                                _zoomAtScaleStart = _zoomLevel;
+                              },
+                              onScaleUpdate: (details) {
+                                final zoomLevel =
+                                    (_zoomAtScaleStart * details.scale).clamp(
+                                  _minZoomLevel,
+                                  _maxZoomLevel,
+                                );
+                                _setZoomLevel(zoomLevel.toDouble());
+                              },
+                              child: Stack(
+                                fit: StackFit.expand,
+                                children: [
+                                  CameraPreview(_controller),
+                                  if (focusIndicatorPosition != null)
+                                    Positioned(
+                                      left: (focusIndicatorPosition.dx - 32)
+                                          .clamp(0, previewSize.width - 64)
+                                          .toDouble(),
+                                      top: (focusIndicatorPosition.dy - 32)
+                                          .clamp(0, previewSize.height - 64)
+                                          .toDouble(),
+                                      child: const IgnorePointer(
+                                        child: Icon(
+                                          Icons.center_focus_weak,
+                                          color: Colors.white,
+                                          size: 64,
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            );
                           },
-                          child: CameraPreview(_controller),
                         ),
                       ),
                     ),
@@ -168,6 +207,33 @@ class TakePictureScreenState extends State<TakePictureScreen> {
         child: const Icon(Icons.camera_alt),
       ),
     );
+  }
+
+  Future<void> _focusAt(Offset position, Size previewSize) async {
+    if (previewSize.isEmpty || !_controller.value.isInitialized) return;
+
+    final focusPoint = Offset(
+      (position.dx / previewSize.width).clamp(0.0, 1.0),
+      (position.dy / previewSize.height).clamp(0.0, 1.0),
+    );
+
+    try {
+      await _controller.setFocusPoint(focusPoint);
+      try {
+        await _controller.setExposurePoint(focusPoint);
+      } on CameraException catch (error) {
+        debugPrint('Unable to set camera exposure point: ${error.description}');
+      }
+
+      if (!mounted) return;
+      _focusIndicatorTimer?.cancel();
+      setState(() => _focusIndicatorPosition = position);
+      _focusIndicatorTimer = Timer(const Duration(seconds: 1), () {
+        if (mounted) setState(() => _focusIndicatorPosition = null);
+      });
+    } on CameraException catch (error) {
+      debugPrint('Unable to set camera focus point: ${error.description}');
+    }
   }
 
   void _setZoomLevel(double zoomLevel) {

@@ -255,6 +255,11 @@ class _MyHomePageState extends State<MyHomePage> {
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
           IconButton(
+            tooltip: 'AI companion mode',
+            icon: const Icon(Icons.tune),
+            onPressed: _showCompanionModeDialog,
+          ),
+          IconButton(
             tooltip: 'Delete all photos',
             icon: const Icon(Icons.delete_forever),
             onPressed: photos.isEmpty
@@ -310,8 +315,6 @@ class _MyHomePageState extends State<MyHomePage> {
                     'Capture a place or artwork and explore the story behind it.',
                     style: theme.textTheme.bodyLarge,
                   ),
-                  const SizedBox(height: 16),
-                  _buildCompanionModeCard(theme, _companionMode),
                   const SizedBox(height: 16),
                   AiDisclosureCard(compact: photos.isNotEmpty),
                   if (photos.isNotEmpty) ...[
@@ -374,6 +377,11 @@ class _MyHomePageState extends State<MyHomePage> {
       floatingActionButton: FloatingActionButton.extended(
         tooltip: 'Take a photo',
         onPressed: () async {
+          if (_companionMode == null) {
+            await _selectCompanionMode();
+            if (!mounted || _companionMode == null) return;
+          }
+
           await Navigator.push(
             context,
             MaterialPageRoute(
@@ -390,66 +398,23 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Future<void> _showCompanionModeDialog() async {
-    final mode = await showCompanionModeDialog(
-      context,
-      initialMode: _companionMode ?? CompanionMode.standard,
+    final mode = await _selectCompanionMode();
+    if (mode == null || !mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('AI companion mode set to ${mode.title}.')),
     );
-    if (mode == null) return;
-    await CompanionModeStorage.save(mode);
-    if (!mounted) return;
-    setState(() => _companionMode = mode);
   }
 
-  Widget _buildCompanionModeCard(
-    ThemeData theme,
-    CompanionMode? savedMode,
-  ) {
-    final mode = savedMode ?? CompanionMode.standard;
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.auto_awesome,
-                  color: theme.colorScheme.primary,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        savedMode == null
-                            ? 'Choose your AI companion mode'
-                            : 'AI companion mode',
-                        style: theme.textTheme.titleMedium,
-                      ),
-                      Text(
-                        savedMode == null
-                            ? '${mode.title} is selected by default'
-                            : mode.title,
-                        style: theme.textTheme.bodyMedium,
-                      ),
-                    ],
-                  ),
-                ),
-                TextButton(
-                  onPressed: _showCompanionModeDialog,
-                  child: Text(savedMode == null ? 'Choose mode' : 'Change'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(mode.description, style: theme.textTheme.bodyMedium),
-          ],
-        ),
-      ),
+  Future<CompanionMode?> _selectCompanionMode() async {
+    final mode = await showCompanionModeDialog(
+      context,
+      initialMode: _companionMode,
     );
+    if (mode == null || !mounted) return null;
+    await CompanionModeStorage.save(mode);
+    if (!mounted) return null;
+    setState(() => _companionMode = mode);
+    return mode;
   }
 
   Widget _buildPhotoCard(PhotoRecord photo) {
