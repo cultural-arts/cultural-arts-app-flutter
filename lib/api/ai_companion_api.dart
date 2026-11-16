@@ -18,7 +18,11 @@ class AiCompanionAPI {
   final String baseUrl;
   final http.Client _client;
 
-  Future<String> describeImage(String encodedPhoto, String exif) async {
+  Future<String> describeImage(
+    String encodedPhoto,
+    String exif, {
+    String mode = 'standard',
+  }) async {
     final response = await _client.post(
       Uri.parse('$baseUrl/ai-companion'),
       headers: const <String, String>{
@@ -27,6 +31,7 @@ class AiCompanionAPI {
       body: {
         'encoded_photo': encodedPhoto,
         'exif': exif,
+        'mode': mode,
       },
     );
 
@@ -50,7 +55,10 @@ class AiCompanionAPI {
   String _errorMessage(http.Response response) {
     switch (response.statusCode) {
       case 429:
-        return 'Daily request limit reached. Please try again tomorrow.';
+        return 'Our AI companion has reached its shared global limit of 100 '
+            'calls for today. Sorry for the pause! The AI service is provided '
+            'on a fixed monthly term. If you’re interested or have any questions, '
+            'contact info@cultural-arts.com.';
       case 452:
         return 'The image could not be processed. Please try another image.';
       case 502:

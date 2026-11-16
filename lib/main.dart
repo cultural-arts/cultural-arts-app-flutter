@@ -3,6 +3,8 @@ import 'package:cultural_arts/utils/web_storage.dart';
 import 'package:cultural_arts/models/photo_record.dart';
 import 'package:cultural_arts/photo_detail_screen.dart';
 import 'package:cultural_arts/widgets/ai_disclosure.dart';
+import 'package:cultural_arts/utils/companion_mode.dart';
+import 'package:cultural_arts/widgets/companion_mode_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
@@ -16,6 +18,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Hive.initFlutter();
   await Hive.openBox('photos');
+  await Hive.openBox('settings');
   await WebPhotoStorage.migrateLegacyPhotos();
   await WebPhotoStorage.markInterruptedGenerations();
 
@@ -244,6 +247,11 @@ class _MyHomePageState extends State<MyHomePage> {
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
           IconButton(
+            tooltip: 'AI companion mode',
+            icon: const Icon(Icons.tune),
+            onPressed: _showCompanionModeDialog,
+          ),
+          IconButton(
             tooltip: 'Delete all photos',
             icon: const Icon(Icons.delete_forever),
             onPressed: photos.isEmpty
@@ -300,7 +308,7 @@ class _MyHomePageState extends State<MyHomePage> {
                     style: theme.textTheme.bodyLarge,
                   ),
                   const SizedBox(height: 16),
-                  const AiDisclosureCard(),
+                  AiDisclosureCard(compact: photos.isNotEmpty),
                   if (photos.isNotEmpty) ...[
                     const SizedBox(height: 24),
                     Text('Your discoveries', style: theme.textTheme.titleLarge),
@@ -374,6 +382,20 @@ class _MyHomePageState extends State<MyHomePage> {
         label: const Text('Take a photo'),
       ),
     );
+  }
+
+  Future<void> _showCompanionModeDialog() async {
+    final mode = await showCompanionModeDialog(
+      context,
+      initialMode: CompanionModeStorage.mode,
+    );
+    if (mode != null) {
+      await CompanionModeStorage.save(mode);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('AI companion mode set to ${mode.title}.')),
+      );
+    }
   }
 
   Widget _buildPhotoCard(PhotoRecord photo) {

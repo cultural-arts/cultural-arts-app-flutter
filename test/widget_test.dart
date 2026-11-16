@@ -2,8 +2,10 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:cultural_arts/main.dart';
+import 'package:cultural_arts/utils/companion_mode.dart';
 import 'package:cultural_arts/utils/web_storage.dart';
 import 'package:cultural_arts/widgets/ai_disclosure.dart';
+import 'package:cultural_arts/widgets/companion_mode_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
@@ -11,20 +13,62 @@ import 'package:hive/hive.dart';
 void main() {
   late Directory hiveDirectory;
   late Box<dynamic> photosBox;
+  late Box<dynamic> settingsBox;
 
   setUpAll(() async {
     hiveDirectory = await Directory.systemTemp.createTemp('cultural-arts-ui');
     Hive.init(hiveDirectory.path);
     photosBox = await Hive.openBox<dynamic>('photos');
+    settingsBox = await Hive.openBox<dynamic>('settings');
   });
 
   setUp(() async {
     await photosBox.clear();
+    await settingsBox.clear();
   });
 
   tearDownAll(() async {
     await photosBox.close();
+    await settingsBox.close();
     await hiveDirectory.delete(recursive: true);
+  });
+
+  testWidgets('companion mode can be selected and persists', (
+    WidgetTester tester,
+  ) async {
+    CompanionMode? selectedMode;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: TextButton(
+              onPressed: () async {
+                final mode = await showCompanionModeDialog(context);
+                selectedMode = mode;
+                if (mode != null) {
+                  await CompanionModeStorage.save(mode);
+                }
+              },
+              child: const Text('Choose mode'),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Choose mode'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byWidgetPredicate(
+      (widget) =>
+          widget is RadioListTile<CompanionMode> &&
+          widget.value == CompanionMode.insight,
+    ));
+    await tester.pump();
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    expect(selectedMode, CompanionMode.insight);
+    expect(CompanionModeStorage.mode, CompanionMode.insight);
   });
 
   testWidgets('AI disclosure explains the value and limitations', (
@@ -65,6 +109,8 @@ void main() {
     );
     await tester.pump();
 
+    expect(find.text('AI-generated content'), findsOneWidget);
+    expect(find.text(aiDisclosureTitle), findsNothing);
     await tester.tap(find.text('A carefully researched description.'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
@@ -72,5 +118,6 @@ void main() {
     expect(find.text('The story behind your photo'), findsOneWidget);
     expect(find.text('A carefully researched description.'), findsOneWidget);
     expect(find.text('AI-generated'), findsOneWidget);
+    expect(find.text('AI-generated content'), findsNothing);
   });
 }

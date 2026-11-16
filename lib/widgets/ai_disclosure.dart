@@ -7,11 +7,33 @@ const String aiDisclosureMessage =
     'make mistakes—please verify important details.';
 
 class AiDisclosureCard extends StatelessWidget {
-  const AiDisclosureCard({super.key});
+  const AiDisclosureCard({super.key, this.compact = false});
+
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    if (compact) {
+      return Card(
+        color: colors.secondaryContainer,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          child: Row(
+            children: [
+              Icon(Icons.auto_awesome, color: colors.onSecondaryContainer),
+              const SizedBox(width: 12),
+              Text(
+                'AI-generated content',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: colors.onSecondaryContainer,
+                    ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     return Card(
       color: colors.secondaryContainer,
       child: Padding(

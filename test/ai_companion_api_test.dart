@@ -11,6 +11,7 @@ void main() {
       expect(request.bodyFields, {
         'encoded_photo': 'encoded-image',
         'exif': '{GPSLatitude=45.5,GPSLongitude=11.8}',
+        'mode': 'standard',
       });
       return http.Response('{"description":"  A historic statue.  "}', 200);
     });
@@ -29,6 +30,20 @@ void main() {
     api.close();
   });
 
+  test('sends the selected companion mode', () async {
+    final client = MockClient((request) async {
+      expect(request.bodyFields['mode'], 'snapshot');
+      return http.Response('{"description":"A brief view."}', 200);
+    });
+    final api = AiCompanionAPI(
+      baseUrl: 'https://example.com',
+      client: client,
+    );
+
+    await api.describeImage('encoded-image', '{}', mode: 'snapshot');
+    api.close();
+  });
+
   test('reports the daily rate limit', () async {
     final api = AiCompanionAPI(
       baseUrl: 'https://example.com',
@@ -43,7 +58,11 @@ void main() {
         isA<AiCompanionApiException>().having(
           (error) => error.message,
           'message',
-          'Daily request limit reached. Please try again tomorrow.',
+          'Our AI companion has reached its shared global limit of 100 calls '
+              'for today. Sorry for the pause! The AI service is provided on a '
+              'fixed monthly term. Please try again tomorrow. If you’re '
+              'interested or have any questions, contact '
+              'info@cultural-arts.com.',
         ),
       ),
     );

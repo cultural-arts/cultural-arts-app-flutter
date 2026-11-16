@@ -9,8 +9,10 @@ import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 
 import 'utils/geo_utilities.dart';
+import 'utils/companion_mode.dart';
 import 'utils/web_storage.dart';
 import 'widgets/ai_disclosure.dart';
+import 'widgets/companion_mode_dialog.dart';
 
 class UploadPhoto extends StatefulWidget {
   const UploadPhoto({
@@ -137,6 +139,17 @@ class _UploadPhotoState extends State<UploadPhoto> {
     });
 
     try {
+      var mode = CompanionModeStorage.mode;
+      if (mode == null) {
+        mode = await showCompanionModeDialog(context);
+        if (mode == null) {
+          await _showError(
+              'Choose an AI companion mode to generate a description.');
+          return;
+        }
+        await CompanionModeStorage.save(mode);
+      }
+
       await WebPhotoStorage.setGenerationPending(widget.photoId);
       final image = await decodeImageFromList(widget.imageBytes);
       final exifData = <String, String>{
@@ -162,6 +175,7 @@ class _UploadPhotoState extends State<UploadPhoto> {
       final result = await aiCompanionAPI.describeImage(
         base64Encode(widget.imageBytes),
         _formatMapToString(exifData),
+        mode: mode.value,
       );
       await WebPhotoStorage.setDescription(widget.photoId, result);
 
